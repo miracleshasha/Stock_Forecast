@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { MiniGauge } from "@/components/SignalGauge";
+import { useNavProgress } from "@/components/NavProgress";
 import {
   ZONE_LABEL,
   changeTone,
@@ -28,6 +29,11 @@ const SORTS: { key: Sort; label: string }[] = [
 
 export default function FavoritesPage() {
   const router = useRouter();
+  const { start } = useNavProgress();
+  const goStock = (ticker: string) => {
+    start();
+    router.push(`/stock/${ticker}`);
+  };
   const [tickers, setTickers] = useState<string[]>([]);
   const [rows, setRows] = useState<FavoriteRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -136,8 +142,8 @@ export default function FavoritesPage() {
               key={r.ticker}
               role="link"
               tabIndex={0}
-              onClick={() => router.push(`/stock/${r.ticker}`)}
-              onKeyDown={(e) => e.key === "Enter" && router.push(`/stock/${r.ticker}`)}
+              onClick={() => goStock(r.ticker)}
+              onKeyDown={(e) => e.key === "Enter" && goStock(r.ticker)}
             >
               <div style={{ minWidth: 0 }}>
                 <div className="fav__nm">{r.name}</div>

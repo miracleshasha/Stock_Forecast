@@ -111,6 +111,21 @@ button { font-family: inherit; }
 .search input::placeholder { color: var(--dim); }
 .icon-search { width: 15px; height: 15px; flex: none; stroke: var(--dim); fill: none; stroke-width: 1.8; }
 
+/* ---------- 로딩 표시 ---------- */
+.navprogress {
+  position: fixed; top: 0; left: 0; height: 3px; z-index: 100;
+  background: linear-gradient(90deg, var(--brass-dim), var(--brass));
+  box-shadow: 0 0 10px rgba(224, 180, 76, .7);
+  transition: width .2s ease, opacity .35s ease; pointer-events: none;
+}
+.spinner {
+  display: inline-block; width: 15px; height: 15px; flex: none;
+  border: 2px solid var(--line); border-top-color: var(--brass);
+  border-radius: 50%; animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 1.6s; } }
+
 .searchbox { position: relative; }
 .drop {
   position: absolute; left: 0; right: 0; top: 100%; z-index: 40;

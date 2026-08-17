@@ -4,16 +4,19 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { SearchResult } from "@/lib/types";
 import { changeTone, formatPct } from "@/lib/format";
+import { useNavProgress } from "./NavProgress";
 
 const SUGGESTIONS = ["삼성전자", "SK하이닉스", "NVDA", "AAPL", "에코프로비엠"];
 
 export default function SearchBox({ autoFocus = false }: { autoFocus?: boolean }) {
   const router = useRouter();
+  const { start } = useNavProgress();
   const [q, setQ] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const [loading, setLoading] = useState(false);
+  const [navigating, setNavigating] = useState(false);
   const [composing, setComposing] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -28,6 +31,7 @@ export default function SearchBox({ autoFocus = false }: { autoFocus?: boolean }
       return;
     }
     setLoading(true);
+    setOpen(true);
     const id = setTimeout(async () => {
       try {
         const res = await fetch(`/api/search?q=${encodeURIComponent(term)}`);
@@ -54,6 +58,8 @@ export default function SearchBox({ autoFocus = false }: { autoFocus?: boolean }
 
   function go(ticker: string) {
     setOpen(false);
+    setNavigating(true);
+    start();
     router.push(`/stock/${ticker}`);
   }
 
@@ -80,10 +86,14 @@ export default function SearchBox({ autoFocus = false }: { autoFocus?: boolean }
   return (
     <div className="searchbox" ref={boxRef}>
       <div className={`search${open && results.length ? " search--focus" : ""}`}>
-        <svg className="icon-search" viewBox="0 0 24 24">
-          <circle cx="11" cy="11" r="7" />
-          <path d="M16.5 16.5 21 21" />
-        </svg>
+        {loading || navigating ? (
+          <span className="spinner" aria-label="불러오는 중" />
+        ) : (
+          <svg className="icon-search" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="7" />
+            <path d="M16.5 16.5 21 21" />
+          </svg>
+        )}
         <input
           ref={inputRef}
           autoFocus={autoFocus}
@@ -104,6 +114,11 @@ export default function SearchBox({ autoFocus = false }: { autoFocus?: boolean }
 
       {open && q.trim().length >= 2 && (
         <div className="drop" role="listbox">
+          {loading && (
+            <div className="drop__row drop__hint">
+              <span className="spinner" style={{ marginRight: 8 }} /> 검색 중…
+            </div>
+          )}
           {results.map((r, i) => (
             <div
               key={r.ticker}

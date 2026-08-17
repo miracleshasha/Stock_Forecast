@@ -3,6 +3,7 @@ import { IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
 import TopBar from "@/components/TopBar";
+import NavProgress from "@/components/NavProgress";
 
 const plexMono = IBM_Plex_Mono({
   subsets: ["latin"],
@@ -32,8 +33,10 @@ export default function RootLayout({
       </head>
       <body>
         <Providers>
-          <TopBar />
-          {children}
+          <NavProgress>
+            <TopBar />
+            {children}
+          </NavProgress>
         </Providers>
       </body>
     </html>
