@@ -1,0 +1,1499 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>시그널데스크 · 화면 스토리보드 v0.1</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0A1317;
+  --panel:#101E24;
+  --panel2:#16272F;
+  --line:#21353E;
+  --line-soft:#1A2C34;
+  --text:#E4EEF1;
+  --muted:#7A939E;
+  --dim:#4F6774;
+  --up:#F2545B;
+  --down:#3D7EF2;
+  --brass:#E0B44C;
+  --brass-dim:#7A6229;
+  --neutral:#8FA3AC;
+
+  --sans:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,system-ui,"Malgun Gothic",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+
+  --r:3px;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:88px}
+body{
+  background:var(--ink);
+  color:var(--text);
+  font-family:var(--sans);
+  font-size:15px;
+  line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+  background-image:
+    linear-gradient(var(--line-soft) 1px,transparent 1px),
+    linear-gradient(90deg,var(--line-soft) 1px,transparent 1px);
+  background-size:44px 44px;
+  background-position:-1px -1px;
+}
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse 90% 60% at 50% 0%,rgba(224,180,76,.06),transparent 70%);
+}
+
+/* ---------- 계측기 라벨 플레이트 ---------- */
+.plate{
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--brass);border:1px solid var(--brass-dim);border-radius:2px;
+  padding:3px 8px;display:inline-block;white-space:nowrap;
+}
+.plate--muted{color:var(--dim);border-color:var(--line)}
+
+/* ---------- 상단 바 ---------- */
+.topbar{
+  position:sticky;top:0;z-index:50;
+  background:rgba(10,19,23,.9);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--line);
+}
+.topbar__in{
+  max-width:1440px;margin:0 auto;padding:14px 28px;
+  display:flex;align-items:center;gap:20px;flex-wrap:wrap;
+}
+.brand{display:flex;align-items:baseline;gap:10px}
+.brand__mark{
+  font-family:var(--mono);font-weight:600;font-size:15px;letter-spacing:.02em;color:var(--text);
+}
+.brand__mark span{color:var(--brass)}
+.brand__sub{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.1em}
+
+.filters{margin-left:auto;display:flex;gap:6px;align-items:center}
+.filters__label{font-family:var(--mono);font-size:10.5px;color:var(--dim);letter-spacing:.14em;margin-right:6px}
+.fbtn{
+  font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;
+  background:transparent;border:1px solid var(--line);color:var(--muted);
+  padding:5px 12px;border-radius:2px;cursor:pointer;transition:.15s;
+}
+.fbtn:hover{border-color:var(--dim);color:var(--text)}
+.fbtn[aria-pressed="true"]{background:var(--brass);border-color:var(--brass);color:#151007;font-weight:600}
+.fbtn:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+
+/* ---------- 레이아웃 ---------- */
+.shell{max-width:1440px;margin:0 auto;padding:0 28px 120px;display:grid;grid-template-columns:214px 1fr;gap:44px;position:relative;z-index:1}
+.toc{position:sticky;top:88px;align-self:start;padding-top:40px;max-height:calc(100vh - 100px);overflow-y:auto}
+.toc h4{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;color:var(--dim);margin:20px 0 8px;text-transform:uppercase}
+.toc h4:first-child{margin-top:0}
+.toc a{
+  display:block;font-family:var(--mono);font-size:12px;color:var(--muted);
+  text-decoration:none;padding:4px 0 4px 11px;border-left:1px solid var(--line);transition:.15s;
+}
+.toc a:hover{color:var(--text);border-left-color:var(--brass)}
+.toc a.on{color:var(--brass);border-left-color:var(--brass)}
+.main{padding-top:40px;min-width:0}
+
+/* ---------- 헤더 ---------- */
+.doc-head{border-bottom:1px solid var(--line);padding-bottom:34px;margin-bottom:12px}
+.doc-head h1{
+  font-size:clamp(30px,4.4vw,46px);font-weight:700;letter-spacing:-.02em;line-height:1.14;margin:16px 0 12px;
+}
+.doc-head h1 em{font-style:normal;color:var(--brass)}
+.doc-head p{color:var(--muted);max-width:60ch;font-size:14.5px}
+.meta{display:flex;gap:26px;flex-wrap:wrap;margin-top:22px;font-family:var(--mono);font-size:11.5px;color:var(--dim)}
+.meta b{color:var(--muted);font-weight:500}
+
+/* ---------- 단계 섹션 ---------- */
+.phase{margin-top:76px}
+.phase__head{display:flex;align-items:center;gap:14px;margin-bottom:8px}
+.phase__head h2{font-size:22px;font-weight:700;letter-spacing:-.01em}
+.phase__desc{color:var(--muted);font-size:14px;max-width:62ch;margin-bottom:34px}
+
+/* ---------- 화면 블록 ---------- */
+.screen{
+  border-top:1px solid var(--line);padding-top:26px;margin-top:52px;
+  display:grid;grid-template-columns:minmax(0,1fr) 296px;gap:34px;align-items:start;
+}
+.screen__hd{grid-column:1/-1;display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+.screen__id{font-family:var(--mono);font-size:12px;color:var(--brass);letter-spacing:.1em}
+.screen__title{font-size:17px;font-weight:600}
+.screen__route{font-family:var(--mono);font-size:11.5px;color:var(--dim);margin-left:auto}
+
+/* 목업 프레임 */
+.frame{
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;
+  box-shadow:0 18px 44px -22px rgba(0,0,0,.9);
+}
+.frame--phone{max-width:330px}
+.frame__bar{
+  height:30px;background:var(--panel2);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:6px;padding:0 11px;
+}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--line)}
+.frame__url{
+  font-family:var(--mono);font-size:10.5px;color:var(--dim);margin-left:8px;
+  background:var(--ink);border-radius:2px;padding:2px 9px;
+}
+.frame__body{padding:22px}
+
+/* 주석 */
+.notes{font-size:13px}
+.notes h5{
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;color:var(--dim);
+  text-transform:uppercase;margin-bottom:12px;
+}
+.notes ol{list-style:none;counter-reset:n}
+.notes li{
+  counter-increment:n;position:relative;padding-left:28px;margin-bottom:13px;color:var(--muted);line-height:1.55;
+}
+.notes li::before{
+  content:counter(n,decimal-leading-zero);position:absolute;left:0;top:1px;
+  font-family:var(--mono);font-size:10px;color:var(--brass);
+  border:1px solid var(--brass-dim);border-radius:2px;padding:1px 4px;line-height:1.3;
+}
+.notes li b{color:var(--text);font-weight:600}
+.notes__spec{
+  margin-top:18px;border-top:1px dashed var(--line);padding-top:14px;
+  font-family:var(--mono);font-size:11px;color:var(--dim);line-height:1.9;
+}
+.notes__spec span{color:var(--muted)}
+
+/* ---------- 앱 UI 목업 요소 ---------- */
+.ui-nav{display:flex;align-items:center;gap:14px;padding-bottom:16px;border-bottom:1px solid var(--line);margin-bottom:22px}
+.ui-logo{font-family:var(--mono);font-size:13px;font-weight:600}
+.ui-logo span{color:var(--brass)}
+.ui-navlinks{margin-left:auto;display:flex;gap:16px;font-size:12px;color:var(--muted)}
+
+.search{
+  display:flex;align-items:center;gap:11px;background:var(--ink);
+  border:1px solid var(--line);border-radius:var(--r);padding:13px 15px;
+}
+.search--focus{border-color:var(--brass);box-shadow:0 0 0 3px rgba(224,180,76,.1)}
+.search__ph{color:var(--dim);font-size:14px}
+.search__typed{color:var(--text);font-size:14px}
+.caret{display:inline-block;width:1.5px;height:15px;background:var(--brass);vertical-align:-2px;animation:blink 1.1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.caret{animation:none}}
+
+.icon-search{width:15px;height:15px;flex:none;stroke:var(--dim);fill:none;stroke-width:1.8}
+
+.drop{border:1px solid var(--line);border-top:none;background:var(--panel2);border-radius:0 0 var(--r) var(--r)}
+.drop__row{
+  display:flex;align-items:center;gap:11px;padding:10px 15px;border-bottom:1px solid var(--line-soft);
+}
+.drop__row:last-child{border-bottom:none}
+.drop__row--on{background:rgba(224,180,76,.07);box-shadow:inset 2px 0 0 var(--brass)}
+.badge{
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;padding:2px 5px;border-radius:2px;
+  border:1px solid var(--line);color:var(--dim);flex:none;
+}
+.drop__name{font-size:13.5px}
+.drop__tick{font-family:var(--mono);font-size:11px;color:var(--dim)}
+.drop__px{margin-left:auto;font-family:var(--mono);font-size:12px;text-align:right}
+.up{color:var(--up)}
+.down{color:var(--down)}
+.neu{color:var(--neutral)}
+
+/* 종목 헤더 */
+.sym{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap}
+.sym__name{font-size:24px;font-weight:700;letter-spacing:-.01em}
+.sym__tick{font-family:var(--mono);font-size:12px;color:var(--dim);margin-top:5px}
+.star{margin-left:auto;width:30px;height:30px;border:1px solid var(--line);border-radius:var(--r);display:grid;place-items:center;color:var(--brass);font-size:15px}
+.px{display:flex;align-items:baseline;gap:12px;margin-top:12px}
+.px__now{font-family:var(--mono);font-size:32px;font-weight:600;letter-spacing:-.02em}
+.px__chg{font-family:var(--mono);font-size:14px}
+.px__asof{font-family:var(--mono);font-size:10.5px;color:var(--dim);margin-left:auto;align-self:flex-end}
+
+/* ★ 시그니처: 시그널 게이지 */
+.verdict{
+  margin-top:20px;border:1px solid var(--line);border-radius:var(--r);
+  background:linear-gradient(180deg,var(--panel2),var(--panel));padding:20px;position:relative;overflow:hidden;
+}
+.verdict::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse 60% 100% at 50% 0%,rgba(242,84,91,.09),transparent 70%);
+}
+.verdict__hd{display:flex;align-items:center;gap:10px;margin-bottom:16px;position:relative}
+.verdict__zone{font-size:21px;font-weight:700;letter-spacing:-.01em}
+.verdict__score{font-family:var(--mono);font-size:12px;color:var(--muted);margin-left:auto}
+.verdict__score b{color:var(--brass);font-size:16px;font-weight:600}
+
+.gauge{position:relative;height:52px;margin:0 2px}
+.gauge__track{
+  position:absolute;top:14px;left:0;right:0;height:9px;border-radius:1px;overflow:hidden;display:flex;
+}
+.gauge__band{height:100%}
+.b1{flex:1;background:rgba(61,126,242,.85)}
+.b2{flex:1;background:rgba(61,126,242,.38)}
+.b3{flex:1.5;background:rgba(143,163,172,.24)}
+.b4{flex:1;background:rgba(242,84,91,.38)}
+.b5{flex:1;background:rgba(242,84,91,.85)}
+.gauge__ticks{position:absolute;top:23px;left:0;right:0;height:8px}
+.gauge__tick{position:absolute;top:0;width:1px;height:5px;background:var(--line)}
+.gauge__tick--maj{height:8px;background:var(--dim)}
+.gauge__scale{position:absolute;top:34px;left:0;right:0;font-family:var(--mono);font-size:9.5px;color:var(--dim)}
+.gauge__scale span{position:absolute;transform:translateX(-50%)}
+.gauge__needle{
+  position:absolute;top:4px;width:2px;height:29px;background:var(--brass);
+  box-shadow:0 0 10px rgba(224,180,76,.65);transition:left 1.1s cubic-bezier(.22,1,.36,1);
+}
+.gauge__needle::before{
+  content:"";position:absolute;top:-6px;left:-4px;border:5px solid transparent;border-top-color:var(--brass);
+}
+@media (prefers-reduced-motion:reduce){.gauge__needle{transition:none}}
+
+.verdict__sum{font-size:13.5px;color:var(--muted);margin-top:14px;line-height:1.6;position:relative}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px;position:relative}
+.tag{
+  font-family:var(--mono);font-size:10.5px;padding:3px 8px;border-radius:2px;
+  border:1px solid var(--line);color:var(--muted);background:var(--ink);
+}
+.tag--pos{border-color:rgba(242,84,91,.45);color:var(--up)}
+.tag--neg{border-color:rgba(61,126,242,.45);color:var(--down)}
+.disc{
+  font-size:11px;color:var(--dim);margin-top:15px;padding-top:12px;
+  border-top:1px solid var(--line-soft);position:relative;line-height:1.5;
+}
+
+/* 차트 */
+.chart-wrap{margin-top:20px;border:1px solid var(--line);border-radius:var(--r);background:var(--ink);padding:14px}
+.chart-tools{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.chip{
+  font-family:var(--mono);font-size:10.5px;padding:3px 9px;border-radius:2px;
+  border:1px solid var(--line);color:var(--muted);
+}
+.chip--on{border-color:var(--brass);color:var(--brass);background:rgba(224,180,76,.08)}
+.chip--range{margin-left:auto}
+.chart-svg{display:block;width:100%;height:auto}
+.chart-legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-family:var(--mono);font-size:10px;color:var(--dim)}
+.chart-legend i{display:inline-block;width:14px;height:2px;vertical-align:3px;margin-right:5px}
+
+/* 지표 그리드 */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px}
+.card{border:1px solid var(--line);border-radius:var(--r);background:var(--panel2);padding:14px}
+.card__hd{display:flex;align-items:baseline;gap:8px;margin-bottom:10px}
+.card__t{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;color:var(--dim);text-transform:uppercase}
+.card__v{margin-left:auto;font-family:var(--mono);font-size:13px}
+.row{display:flex;align-items:center;gap:10px;padding:5px 0;font-size:12.5px;border-bottom:1px solid var(--line-soft)}
+.row:last-child{border-bottom:none}
+.row__k{color:var(--dim);font-family:var(--mono);font-size:11px}
+.row__v{margin-left:auto;font-family:var(--mono);font-size:12px}
+.pip{width:5px;height:5px;border-radius:50%;flex:none}
+.pip--up{background:var(--up)}
+.pip--down{background:var(--down)}
+.pip--neu{background:var(--neutral)}
+
+.bar{height:4px;background:var(--line);border-radius:2px;overflow:hidden;margin-top:6px}
+.bar__f{height:100%;background:var(--brass)}
+
+/* 즐겨찾기 */
+.fav{display:flex;align-items:center;gap:14px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel2);padding:13px 15px;margin-bottom:9px}
+.fav__nm{font-size:14px;font-weight:600}
+.fav__tk{font-family:var(--mono);font-size:10.5px;color:var(--dim)}
+.fav__gauge{width:96px;flex:none}
+.fav__mini{height:5px;border-radius:1px;display:flex;overflow:hidden;position:relative}
+.fav__mini i{position:absolute;top:-2px;width:2px;height:9px;background:var(--brass)}
+.fav__zone{font-family:var(--mono);font-size:10.5px;margin-top:5px;text-align:center}
+.fav__px{margin-left:auto;text-align:right;font-family:var(--mono);font-size:12.5px}
+
+/* 상태 */
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.state{border:1px solid var(--line);border-radius:var(--r);background:var(--panel2);padding:26px 18px;text-align:center;min-height:196px;display:flex;flex-direction:column;justify-content:center;gap:9px}
+.state__ic{font-size:22px;color:var(--dim)}
+.state__t{font-size:14px;font-weight:600}
+.state__d{font-size:12px;color:var(--muted);line-height:1.55}
+.state__btn{font-family:var(--mono);font-size:11px;border:1px solid var(--brass-dim);color:var(--brass);padding:6px 12px;border-radius:2px;margin:6px auto 0}
+.skel{background:linear-gradient(90deg,var(--line-soft),var(--line),var(--line-soft));border-radius:2px;height:11px;margin:7px auto;background-size:200% 100%;animation:sh 1.4s linear infinite}
+@keyframes sh{to{background-position:-200% 0}}
+@media (prefers-reduced-motion:reduce){.skel{animation:none}}
+
+/* 페이월 */
+.quota{
+  display:flex;align-items:center;gap:11px;border:1px solid rgba(224,180,76,.4);
+  background:rgba(224,180,76,.07);border-radius:var(--r);padding:11px 15px;font-size:12.5px;
+}
+.quota__c{font-family:var(--mono);color:var(--brass);font-weight:600}
+.quota__cta{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--brass);border-bottom:1px solid var(--brass-dim)}
+
+.blurwrap{position:relative;margin-top:16px}
+.blurred{filter:blur(5px);opacity:.5;pointer-events:none;user-select:none}
+.paywall{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(92%,340px);
+  background:var(--panel2);border:1px solid var(--brass-dim);border-radius:var(--r);
+  padding:22px;text-align:center;box-shadow:0 22px 50px -14px rgba(0,0,0,.92);
+}
+.paywall h4{font-size:16px;margin-bottom:8px}
+.paywall p{font-size:12.5px;color:var(--muted);margin-bottom:16px;line-height:1.6}
+.btn{
+  display:block;width:100%;text-align:center;font-family:var(--mono);font-size:12px;letter-spacing:.04em;
+  background:var(--brass);color:#151007;font-weight:600;padding:10px;border-radius:2px;
+}
+.btn--ghost{background:transparent;color:var(--muted);border:1px solid var(--line);font-weight:400;margin-top:8px}
+
+/* 요금제 */
+.plans{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.plan{border:1px solid var(--line);border-radius:var(--r);background:var(--panel2);padding:20px}
+.plan--hi{border-color:var(--brass-dim);background:linear-gradient(180deg,rgba(224,180,76,.06),var(--panel2))}
+.plan__n{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
+.plan__p{font-family:var(--mono);font-size:26px;font-weight:600;margin:10px 0 4px}
+.plan__p small{font-size:12px;color:var(--dim);font-weight:400}
+.plan ul{list-style:none;margin:16px 0;font-size:12.5px;color:var(--muted)}
+.plan li{padding:5px 0;border-bottom:1px solid var(--line-soft);display:flex;gap:8px}
+.plan li:last-child{border-bottom:none}
+.plan li::before{content:"—";color:var(--dim);font-family:var(--mono);font-size:11px}
+.plan li.yes::before{content:"✓";color:var(--brass)}
+
+/* 로그인 */
+.field{margin-bottom:12px}
+.field label{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--dim);margin-bottom:6px;text-transform:uppercase}
+.field div{border:1px solid var(--line);border-radius:var(--r);background:var(--ink);padding:11px 13px;font-size:13px;color:var(--dim)}
+.oauth{display:flex;gap:8px;margin-top:14px}
+.oauth div{flex:1;border:1px solid var(--line);border-radius:var(--r);padding:10px;text-align:center;font-size:12px;color:var(--muted)}
+
+/* 3차 와이어 */
+.wire{border:1px dashed var(--line);border-radius:var(--r);padding:16px;background:rgba(22,39,47,.4)}
+.wire__t{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.1em;margin-bottom:12px;text-transform:uppercase}
+.wire__box{border:1px dashed var(--line);border-radius:2px;padding:12px;margin-bottom:9px;font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:10px}
+.wire__box:last-child{margin-bottom:0}
+
+/* 표 */
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:14px}
+.tbl th,.tbl td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line-soft)}
+.tbl th{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--dim);text-transform:uppercase;border-bottom-color:var(--line)}
+.tbl td{color:var(--muted)}
+.tbl td:first-child{font-family:var(--mono);font-size:11px;color:var(--brass)}
+
+.callout{
+  border-left:2px solid var(--brass);background:rgba(224,180,76,.05);
+  padding:14px 18px;margin-top:22px;font-size:13px;color:var(--muted);border-radius:0 var(--r) var(--r) 0;
+}
+.callout b{color:var(--text)}
+
+.hidden{display:none !important}
+:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+
+@media (max-width:1180px){
+  .shell{grid-template-columns:1fr;gap:0;padding:0 20px 90px}
+  .toc{display:none}
+  .screen{grid-template-columns:1fr;gap:24px}
+}
+@media (max-width:640px){
+  .grid2,.grid3,.plans{grid-template-columns:1fr}
+  .topbar__in{padding:12px 20px}
+  .filters{margin-left:0;width:100%}
+  .frame__body{padding:16px}
+  .px__now{font-size:26px}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar__in">
+    <div class="brand">
+      <div class="brand__mark">SIGNAL<span>·</span>DESK</div>
+      <div class="brand__sub">STORYBOARD v0.1</div>
+    </div>
+    <div class="filters">
+      <span class="filters__label">단계 필터</span>
+      <button class="fbtn" data-f="all" aria-pressed="true">전체</button>
+      <button class="fbtn" data-f="p1" aria-pressed="false">1차</button>
+      <button class="fbtn" data-f="p2" aria-pressed="false">2차</button>
+      <button class="fbtn" data-f="p3" aria-pressed="false">3차</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+
+  <nav class="toc" aria-label="화면 목차">
+    <h4>1차 · MVP</h4>
+    <a href="#s01">S-01 홈 / 검색</a>
+    <a href="#s02">S-02 자동완성</a>
+    <a href="#s03">S-03 시그널 헤더</a>
+    <a href="#s04">S-04 차트</a>
+    <a href="#s05">S-05 지표 · 매크로</a>
+    <a href="#s06">S-06 즐겨찾기</a>
+    <a href="#s07">S-07 상태 화면</a>
+    <a href="#s08">S-08 모바일</a>
+    <h4>2차 · 수익화</h4>
+    <a href="#s09">S-09 한도 배너</a>
+    <a href="#s10">S-10 페이월</a>
+    <a href="#s11">S-11 요금제</a>
+    <a href="#s12">S-12 로그인</a>
+    <h4>3차 · 리텐션</h4>
+    <a href="#s13">S-13 알림</a>
+    <a href="#s14">S-14 스크리너</a>
+    <h4>부록</h4>
+    <a href="#appx">판정 규칙표</a>
+  </nav>
+
+  <main class="main">
+
+    <div class="doc-head">
+      <span class="plate">화면 스토리보드 · 기술적 분석 웹서비스</span>
+      <h1>검색 한 번으로<br><em>지금이 어떤 구간인지</em> 읽는다</h1>
+      <p>시그널데스크는 지표를 나열하지 않습니다. 추세·모멘텀·밴드·거래량·매크로를 하나의 점수로 합산해 매수/중립/매도 구간을 먼저 보여주고, 그 판단의 근거를 아래에 펼칩니다.</p>
+      <div class="meta">
+        <div><b>대상 유니버스</b> KOSPI200 · KOSDAQ150 · NASDAQ100 · S&amp;P500</div>
+        <div><b>갱신 주기</b> 일 1회 (종가 기준 배치)</div>
+        <div><b>1차 화면 수</b> 8</div>
+        <div><b>색상 규약</b> 상승 = 레드 / 하락 = 블루</div>
+      </div>
+    </div>
+
+    <!-- ══════════════════ 1차 ══════════════════ -->
+    <section class="phase" data-phase="p1">
+      <div class="phase__head">
+        <span class="plate">PHASE 1</span>
+        <h2>1차 개발 — 오픈 최소 범위</h2>
+      </div>
+      <p class="phase__desc">로그인·결제 없이 "검색하면 판정이 나온다"만 완성합니다. 즐겨찾기는 브라우저 저장(localStorage)으로 처리해 서버 인증을 통째로 뒤로 미룹니다.</p>
+
+      <!-- S-01 -->
+      <article class="screen" id="s01">
+        <div class="screen__hd">
+          <span class="screen__id">S-01</span>
+          <span class="screen__title">홈 / 검색</span>
+          <span class="screen__route">/</span>
+        </div>
+        <div class="frame">
+          <div class="frame__bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="frame__url">signaldesk.kr</span></div>
+          <div class="frame__body">
+            <div class="ui-nav">
+              <div class="ui-logo">SIGNAL<span>·</span>DESK</div>
+              <div class="ui-navlinks"><span>즐겨찾기</span><span>지표 설명</span></div>
+            </div>
+            <div style="padding:44px 0 12px;text-align:center">
+              <div class="plate plate--muted" style="margin-bottom:18px">2026-08-14 종가 기준</div>
+              <div style="font-size:27px;font-weight:700;letter-spacing:-.02em;line-height:1.3;margin-bottom:10px">
+                종목을 검색하면<br>지금이 <span style="color:var(--brass)">어떤 구간</span>인지 알려드립니다
+              </div>
+              <div style="color:var(--muted);font-size:13px;margin-bottom:26px">기술적 지표 8종 + 매크로 4종을 합산한 단일 점수</div>
+            </div>
+            <div class="search">
+              <svg class="icon-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg>
+              <span class="search__ph">종목명, 티커, 종목코드로 검색</span>
+            </div>
+            <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:14px;justify-content:center">
+              <span class="chip">삼성전자</span><span class="chip">SK하이닉스</span><span class="chip">NVDA</span><span class="chip">AAPL</span><span class="chip">에코프로</span>
+            </div>
+            <div style="display:flex;gap:12px;margin-top:34px">
+              <div class="card" style="flex:1">
+                <div class="card__hd"><span class="card__t">KOSPI</span><span class="card__v up">2,684.20 <small>+0.62%</small></span></div>
+                <div class="row"><span class="pip pip--up"></span><span class="row__k">VKOSPI</span><span class="row__v">16.4</span></div>
+              </div>
+              <div class="card" style="flex:1">
+                <div class="card__hd"><span class="card__t">S&amp;P 500</span><span class="card__v down">5,412.88 <small>-0.31%</small></span></div>
+                <div class="row"><span class="pip pip--down"></span><span class="row__k">VIX</span><span class="row__v">19.8</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <aside class="notes">
+          <h5>화면 주석</h5>
+          <ol>
+            <li><b>검색창이 히어로다.</b> 첫 진입 시 시선이 검색창에 떨어지도록 상단 카피는 3줄 이내로 제한하고, 검색창 하단에 인기 종목 칩을 둬 첫 클릭 장벽을 없앱니다.</li>
+            <li><b>기준일 배지를 최상단에</b> 노출합니다. 실시간이 아니라는 사실을 숨기지 않는 편이 신뢰에 유리합니다.</li>
+            <li>하단 <b>시장 요약 카드</b>는 매크로 지표(VIX/VKOSPI)를 미리 보여주는 자리이자, 배치가 정상 동작 중임을 증명하는 헬스 체크 역할을 겸합니다.</li>
+            <li>종목 상세가 SEO 유입의 핵심이므로 홈은 <b>SSR + 정적 캐시</b>로 처리합니다.</li>
+          </ol>
+          <div class="notes__spec">
+            API <span>GET /api/macro</span><br>
+            캐시 <span>s-maxage=3600, SWR=86400</span><br>
+            상태 <span>기본 / 검색 포커스</span>
+          </div>
+        </aside>
+      </article>
+
+      <!-- S-02 -->
+      <article class="screen" id="s02">
+        <div class="screen__hd">
+          <span class="screen__id">S-02</span>
+          <span class="screen__title">검색 자동완성</span>
+          <span class="screen__route">/ (오버레이)</span>
+        </div>
+        <div class="frame">
+          <div class="frame__bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="frame__url">signaldesk.kr</span></div>
+          <div class="frame__body">
+            <div class="search search--focus" style="border-radius:3px 3px 0 0">
+              <svg class="icon-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg>
+              <span class="search__typed">삼성</span><span class="caret"></span>
+            </div>
+            <div class="drop">
+              <div class="drop__row drop__row--on">
+                <span class="badge">KOSPI</span>
+                <span class="drop__name">삼성전자</span>
+                <span class="drop__tick">005930</span>
+                <span class="drop__px up">78,500<br><small>+1.55%</small></span>
+              </div>
+              <div class="drop__row">
+                <span class="badge">KOSPI</span>
+                <span class="drop__name">삼성전자우</span>
+                <span class="drop__tick">005935</span>
+                <span class="drop__px up">64,200<br><small>+1.10%</small></span>
+              </div>
+              <div class="drop__row">
+                <span class="badge">KOSPI</span>
+                <span class="drop__name">삼성SDI</span>
+                <span class="drop__tick">006400</span>
+                <span class="drop__px down">312,000<br><small>-2.04%</small></span>
+              </div>
+              <div class="drop__row">
+                <span class="badge">KOSPI</span>
+                <span class="drop__name">삼성바이오로직스</span>
+                <span class="drop__tick">207940</span>
+                <span class="drop__px up">1,024,000<br><small>+0.39%</small></span>
+              </div>
+              <div class="drop__row" style="justify-content:center;color:var(--dim);font-size:11.5px;font-family:var(--mono)">
+                ↑↓ 이동 · Enter 선택 · Esc 닫기
+              </div>
+            </div>
+          </div>
+        </div>
+        <aside class="notes">
+          <h5>화면 주석</h5>
+          <ol>
+            <li><b>2글자 이상 + 300ms 디바운스</b>로 호출합니다. 한글 조합 중(composition) 이벤트는 무시해 "ㅅ→사→삼" 3연속 호출을 막습니다.</li>
+            <li>결과에 <b>현재가와 등락률을 함께</b> 보여줍니다. 종목명만 나열하면 선택 판단이 한 번 더 필요해집니다.</li>
+            <li>유니버스 밖 종목이 검색되면 결과 대신 <b>"현재 지원하지 않는 종목입니다. 지원 요청하기"</b> 를 노출해 수요를 수집합니다.</li>
+            <li>종목 마스터(약 700건)는 <b>서버 메모리에 상주</b>시켜 DB를 거치지 않습니다. 자동완성은 호출이 잦아 DB 왕복이 곧 비용입니다.</li>
+            <li>레이트리밋 <b>IP당 분당 60회</b>.</li>
+          </ol>
+          <div class="notes__spec">
+            API <span>GET /api/search?q=</span><br>
+            최대 <span>8건</span><br>
+            상태 <span>입력중 / 결과 / 무결과 / 미지원종목</span>
+          </div>
+        </aside>
+      </article>
+
+      <!-- S-03 -->
+      <article class="screen" id="s03">
+        <div class="screen__hd">
+          <span class="screen__id">S-03</span>
+          <span class="screen__title">종목 상세 — 시그널 헤더 <span style="color:var(--brass)">★ 핵심</span></span>
+          <span class="screen__route">/stock/005930</span>
+        </div>
+        <div class="frame">
+          <div class="frame__bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="frame__url">signaldesk.kr/stock/005930</span></div>
+          <div class="frame__body">
+            <div class="sym">
+              <div>
+                <div class="sym__name">삼성전자</div>
+                <div class="sym__tick">005930 · KOSPI · KRW</div>
+              </div>
+              <div class="star">★</div>
+            </div>
+            <div class="px">
+              <span class="px__now up">78,500</span>
+              <span class="px__chg up">▲ 1,200 (+1.55%)</span>
+              <span class="px__asof">2026-08-14 종가</span>
+            </div>
+
+            <div class="verdict">
+              <div class="verdict__hd">
+                <span class="plate">종합 판정</span>
+                <span class="verdict__zone up">매수 구간</span>
+                <span class="verdict__score">SCORE <b>+42</b> / 100</span>
+              </div>
+              <div class="gauge" data-score="42">
+                <div class="gauge__track">
+                  <div class="gauge__band b1"></div><div class="gauge__band b2"></div>
+                  <div class="gauge__band b3"></div><div class="gauge__band b4"></div>
+                  <div class="gauge__band b5"></div>
+                </div>
+                <div class="gauge__ticks"></div>
+                <div class="gauge__scale">
+                  <span style="left:0%">-100</span><span style="left:27.3%">-15</span>
+                  <span style="left:50%">0</span><span style="left:72.7%">+15</span><span style="left:100%">+100</span>
+                </div>
+                <div class="gauge__needle" style="left:50%"></div>
+              </div>
+              <div class="verdict__sum">20일선 위 정배열이 유지되는 가운데 거래량이 20일 평균의 2.1배로 늘었습니다. 볼린저 %B 0.82로 상단에 근접했지만 아직 과열 구간은 아닙니다. 다만 VIX가 19.8로 오르고 있어 시장 전체 부담은 남아 있습니다.</div>
+              <div class="tags">
+                <span class="tag tag--pos">MA 정배열</span>
+                <span class="tag tag--pos">%B 0.82</span>
+                <span class="tag tag--pos">거래량 2.1×</span>
+                <span class="tag tag--pos">MACD 골든</span>
+                <span class="tag tag--neg">VIX 상승</span>
+              </div>
+              <div class="disc">본 정보는 기술적 지표 기반 참고 자료이며 투자 권유가 아닙니다. 투자 판단과 그 결과에 대한 책임은 이용자 본인에게 있습니다.</div>
+            </div>
+          </div>
+        </div>
+        <aside class="notes">
+          <h5>화면 주석</h5>
+          <ol>
+            <li><b>배치 순서가 요구사항이다.</b> 종목명 → 현재가 → 판정 카드 → 차트. 차트는 반드시 판정 아래에 옵니다. 첫 화면(above the fold)에서 판정까지 보이는 것이 이 서비스의 존재 이유입니다.</li>
+            <li><b>시그널 게이지</b>가 시그니처 요소입니다. -100~+100 눈금자에 5개 색 밴드를 깔고 황동색 바늘로 현재 점수를 표시합니다. 숫자만 쓰면 "+42가 높은 건가?"라는 질문이 남습니다.</li>
+            <li>요약 문장은 <b>템플릿 조합</b>으로 생성합니다. 지표별 상태 → 문장 조각 매핑 테이블을 두고 상위 3개 기여 지표만 서술합니다.</li>
+            <li>근거 태그는 <b>기여도 상위 5개</b>. 강세 요인은 레드, 약세 요인은 블루 테두리로 구분해 한눈에 균형이 읽히게 합니다.</li>
+            <li><b>면책 문구는 카드 내부에</b> 둡니다. 푸터로 내리면 캡처·공유 시 잘려나가 리스크가 커집니다.</li>
+            <li>즐겨찾기 별은 헤더 우측. 1차에서는 localStorage에 즉시 반영하고 서버 호출이 없습니다.</li>
+            <li>데이터 결측·거래정지 시 억지 판정 대신 <b>"판정 불가"</b> 를 표시합니다.</li>
+          </ol>
+          <div class="notes__spec">
+            API <span>GET /api/stock/:ticker</span><br>
+            구간 <span>BUY / BUY_LEAN / NEUTRAL / SELL_LEAN / SELL / UNAVAILABLE</span><br>
+            응답목표 <span>&lt; 100ms (DB 단일 SELECT)</span>
+          </div>
+        </aside>
+      </article>
+
+      <!-- S-04 -->
+      <article class="screen" id="s04">
+        <div class="screen__hd">
+          <span class="screen__id">S-04</span>
+          <span class="screen__title">종목 상세 — 차트</span>
+          <span class="screen__route">/stock/005930 (연속)</span>
+        </div>
+        <div class="frame">
+          <div class="frame__bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="frame__url">signaldesk.kr/stock/005930</span></div>
+          <div class="frame__body">
+            <div class="chart-wrap">
+              <div class="chart-tools">
+                <span class="chip chip--on">볼린저밴드</span>
+                <span class="chip chip--on">엔벨로프</span>
+                <span class="chip chip--on">MA 20/60/120</span>
+                <span class="chip">거래량</span>
+                <span class="chip chip--range">3M · <b style="color:var(--brass)">6M</b> · 1Y · 3Y</span>
+              </div>
+              <svg class="chart-svg" id="mockChart" viewBox="0 0 820 360" role="img" aria-label="캔들 차트 목업 — 볼린저밴드와 엔벨로프, 거래량 포함"></svg>
+              <div class="chart-legend">
+                <span><i style="background:var(--brass)"></i>볼린저 상/하단 (20, 2σ)</span>
+                <span><i style="background:var(--muted)"></i>중심선 MA20</span>
+                <span><i style="background:var(--down);opacity:.7"></i>엔벨로프 ±10%</span>
+                <span><i style="background:var(--up)"></i>상승 캔들</span>
+                <span><i style="background:var(--down)"></i>하락 캔들</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <aside class="notes">
+          <h5>화면 주석</h5>
+          <ol>
+            <li>라이브러리는 <b>lightweight-charts</b>(TradingView, Apache-2.0). 45KB 수준이고 오버레이를 라인 시리즈로 자유롭게 얹을 수 있습니다.</li>
+            <li><b>볼린저밴드는 영역 음영</b>으로, <b>엔벨로프는 점선</b>으로 표현해 두 밴드가 겹쳐도 구분됩니다. 둘 다 실선이면 화면이 읽히지 않습니다.</li>
+            <li>오버레이 토글 상태는 localStorage에 저장해 다음 방문에도 유지합니다.</li>
+            <li><b>상승 레드 / 하락 블루</b> 국내 관례를 따릅니다. 해외 종목도 동일 규약을 적용하고 설정에서 변경 가능하게 둡니다(2차).</li>
+            <li>차트 데이터는 판정 API와 <b>분리 호출</b>합니다. 판정은 즉시 렌더, 차트는 그 뒤에 채워져 첫 화면 체감 속도를 확보합니다.</li>
+            <li>거래량 서브차트에 <b>20일 평균선</b>을 얹어 "평균 대비 몇 배"가 눈으로 보이게 합니다.</li>
+          </ol>
+          <div class="notes__spec">
+            API <span>GET /api/stock/:ticker/chart?range=6M</span><br>
+            기본기간 <span>6개월 일봉</span><br>
+            토글 <span>BB / ENV / MA / VOL</span>
+          </div>
+        </aside>
+      </article>
+
+      <!-- S-05 -->
+      <article class="screen" id="s05">
+        <div class="screen__hd">
+          <span class="screen__id">S-05</span>
+          <span class="screen__title">종목 상세 — 지표 상세 · 매크로</span>
+          <span class="screen__route">/stock/005930 (연속)</span>
+        </div>
+        <div class="frame">
+          <div class="frame__bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="frame__url">signaldesk.kr/stock/005930</span></div>
+          <div class="frame__body">
+            <div class="plate plate--muted" style="margin-bottom:14px">판정 근거 · 기여도순</div>
+            <div class="grid2">
+              <div class="card">
+                <div class="card__hd"><span class="card__t">추세 · 가중 25%</span><span class="card__v up">+20</span></div>
+                <div class="row"><span class="pip pip--up"></span><span class="row__k">MA 배열</span><span class="row__v">정배열 (20&gt;60&gt;120)</span></div>
+                <div class="row"><span class="pip pip--up"></span><span class="row__k">종가 vs MA20</span><span class="row__v">+3.8%</span></div>
+                <div class="bar"><div class="bar__f" style="width:80%"></div></div>
+              </div>
+              <div class="card">
+                <div class="card__hd"><span class="card__t">모멘텀 · 25%</span><span class="card__v up">+14</span></div>
+                <div class="row"><span class="pip pip--up"></span><span class="row__k">RSI(14)</span><span class="row__v">62.4</span></div>
+                <div class="row"><span class="pip pip--up"></span><span class="row__k">MACD</span><span class="row__v">골든크로스 D+3</span></div>
+                <div class="bar"><div class="bar__f" style="width:56%"></div></div>
+              </div>
+              <div class="card">
+                <div class="card__hd"><span class="card__t">밴드 위치 · 20%</span><span class="card__v up">+8</span></div>
+                <div class="row"><span class="pip pip--up"></span><span class="row__k">볼린저 %B</span><span class="row__v">0.82</span></div>
+                <div class="row"><span class="pip pip--neu"></span><span class="row__k">밴드폭</span><span class="row__v">0.094 (확장)</span></div>
+                <div class="row"><span class="pip pip--neu"></span><span class="row__k">엔벨로프</span><span class="row__v">중심선 +3.8% (상단 미도달)</span></div>
+                <div class="bar"><div class="bar__f" style="width:40%"></div></div>
+              </div>
+              <div class="card">
+                <div class="card__hd"><span class="card__t">거래량 · 15%</span><span class="card__v up">+12</span></div>
+                <div class="row"><span class="pip pip--up"></span><span class="row__k">20일 평균 대비</span><span class="row__v">2.1배</span></div>
+                <div class="row"><span class="pip pip--up"></span><span class="row__k">OBV 20일</span><span class="row__v">상승</span></div>
+                <div class="bar"><div class="bar__f" style="width:80%"></div></div>
+              </div>
+            </div>
+
+            <div class="plate plate--muted" style="margin:22px 0 12px">매크로 · 가중 15% · 종목 무관 공통</div>
+            <div class="card">
+              <div class="card__hd"><span class="card__t">시장 환경</span><span class="card__v down">-12</span></div>
+              <div class="row"><span class="pip pip--down"></span><span class="row__k">VIX (공포지수)</span><span class="row__v down">19.8 ▲ 2주 연속 상승</span></div>
+              <div class="row"><span class="pip pip--neu"></span><span class="row__k">VKOSPI</span><span class="row__v neu">16.4 보합</span></div>
+              <div class="row"><span class="pip pip--down"></span><span class="row__k">미 국채 10년물</span><span class="row__v down">4.32% ▲</span></div>
+              <div class="row"><span class="pip pip--neu"></span><span class="row__k">USD/KRW</span><span class="row__v neu">1,342 보합</span></div>
+              <div class="row"><span class="pip pip--up"></span><span class="row__k">KOSPI 대비 상대강도(20일)</span><span class="row__v up">+4.1%p</span></div>
+            </div>
+          </div>
+        </div>
+        <aside class="notes">
+          <h5>화면 주석</h5>
+          <ol>
+            <li>카드 헤더에 <b>가중치와 획득 점수</b>를 함께 표기합니다. 총점이 어떻게 나왔는지 사용자가 직접 검산할 수 있어야 블랙박스가 아닙니다.</li>
+            <li>각 지표 앞의 <b>점(pip) 색</b>이 강세/중립/약세를 나타냅니다. 숫자를 읽지 않아도 스캔이 가능합니다.</li>
+            <li>매크로는 종목과 무관한 공통값이라 <b>별도 섹션으로 분리</b>했습니다. 같은 날 모든 종목이 동일한 매크로 점수를 받습니다.</li>
+            <li>지표 명칭에 <b>툴팁</b>을 붙여 "%B가 뭔가요?"를 화면 안에서 해결합니다. 별도 용어집 페이지로 이탈시키지 않습니다.</li>
+            <li class="notes__warn"><b>가중치는 초기 제안값</b>입니다. 오픈 전 3~5년 백테스트로 보정이 필요하며, 최적값은 검증 전까지 <b>확인이 필요합니다.</b></li>
+          </ol>
+          <div class="notes__spec">
+            데이터 <span>daily_signals.breakdown (JSONB)</span><br>
+            매크로 <span>daily_macro (날짜 PK)</span>
+          </div>
+        </aside>
+      </article>
+
+      <!-- S-06 -->
+      <article class="screen" id="s06">
+        <div class="screen__hd">
+          <span class="screen__id">S-06</span>
+          <span class="screen__title">즐겨찾기</span>
+          <span class="screen__route">/favorites</span>
+        </div>
+        <div class="frame">
+          <div class="frame__bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="frame__url">signaldesk.kr/favorites</span></div>
+          <div class="frame__body">
+            <div class="ui-nav">
+              <div class="ui-logo">SIGNAL<span>·</span>DESK</div>
+              <div class="ui-navlinks"><span style="color:var(--brass)">즐겨찾기</span><span>지표 설명</span></div>
+            </div>
+            <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:16px">
+              <div style="font-size:17px;font-weight:700">즐겨찾기</div>
+              <div class="plate plate--muted">4 / 20</div>
+              <div style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--dim)">시그널순 ▾</div>
+            </div>
+
+            <div class="fav">
+              <div><div class="fav__nm">삼성전자</div><div class="fav__tk">005930 · KOSPI</div></div>
+              <div class="fav__gauge">
+                <div class="fav__mini"><div class="gauge__band b1"></div><div class="gauge__band b2"></div><div class="gauge__band b3"></div><div class="gauge__band b4"></div><div class="gauge__band b5"></div><i style="left:71%"></i></div>
+                <div class="fav__zone up">매수 +42</div>
+              </div>
+              <div class="fav__px up">78,500<br><small>+1.55%</small></div>
+            </div>
+            <div class="fav">
+              <div><div class="fav__nm">SK하이닉스</div><div class="fav__tk">000660 · KOSPI</div></div>
+              <div class="fav__gauge">
+                <div class="fav__mini"><div class="gauge__band b1"></div><div class="gauge__band b2"></div><div class="gauge__band b3"></div><div class="gauge__band b4"></div><div class="gauge__band b5"></div><i style="left:62%"></i></div>
+                <div class="fav__zone up">매수 우위 +24</div>
+              </div>
+              <div class="fav__px up">204,000<br><small>+0.74%</small></div>
+            </div>
+            <div class="fav">
+              <div><div class="fav__nm">NVIDIA</div><div class="fav__tk">NVDA · NASDAQ</div></div>
+              <div class="fav__gauge">
+                <div class="fav__mini"><div class="gauge__band b1"></div><div class="gauge__band b2"></div><div class="gauge__band b3"></div><div class="gauge__band b4"></div><div class="gauge__band b5"></div><i style="left:52%"></i></div>
+                <div class="fav__zone neu">중립 +4</div>
+              </div>
+              <div class="fav__px neu">$128.44<br><small>+0.02%</small></div>
+            </div>
+            <div class="fav">
+              <div><div class="fav__nm">에코프로비엠</div><div class="fav__tk">247540 · KOSDAQ</div></div>
+              <div class="fav__gauge">
+                <div class="fav__mini"><div class="gauge__band b1"></div><div class="gauge__band b2"></div><div class="gauge__band b3"></div><div class="gauge__band b4"></div><div class="gauge__band b5"></div><i style="left:26%"></i></div>
+                <div class="fav__zone down">매도 우위 -34</div>
+              </div>
+              <div class="fav__px down">142,300<br><small>-3.21%</small></div>
+            </div>
+
+            <div style="margin-top:18px;border:1px dashed var(--line);border-radius:3px;padding:13px;font-size:12px;color:var(--dim);text-align:center">
+              현재 즐겨찾기는 이 브라우저에만 저장됩니다. 로그인하면 기기 간 동기화됩니다. <span style="color:var(--brass)">(2차 예정)</span>
+            </div>
+          </div>
+        </div>
+        <aside class="notes">
+          <h5>화면 주석</h5>
+          <ol>
+            <li>각 행에 <b>미니 게이지</b>를 넣어 목록 자체가 대시보드가 되게 합니다. 종목명만 나열하면 하나씩 눌러봐야 합니다.</li>
+            <li>기본 정렬은 <b>시그널 점수 내림차순</b>. 매수 구간 종목이 위로 올라옵니다. 등락률·추가순 정렬도 제공합니다.</li>
+            <li>1차는 <b>localStorage 저장</b>(키 <code style="font-family:var(--mono);color:var(--muted)">sd.favorites</code>, 최대 20종목). 서버 인증이 없으므로 개발량이 크게 줄어듭니다.</li>
+            <li>브라우저 저장이라는 사실을 <b>화면에서 명시</b>합니다. 데이터가 사라졌을 때의 CS를 미리 막습니다.</li>
+            <li>2차 로그인 도입 시 첫 로그인 1회에 한해 localStorage 목록을 서버로 <b>병합(merge)</b> 합니다.</li>
+          </ol>
+          <div class="notes__spec">
+            저장소 <span>localStorage (1차) → favorites 테이블 (2차)</span><br>
+            제한 <span>무료 20 → 2차에서 무료 5 / 유료 50</span>
+          </div>
+        </aside>
+      </article>
+
+      <!-- S-07 -->
+      <article class="screen" id="s07">
+        <div class="screen__hd">
+          <span class="screen__id">S-07</span>
+          <span class="screen__title">상태 화면 — 로딩 · 빈 · 오류</span>
+          <span class="screen__route">공통 컴포넌트</span>
+        </div>
+        <div class="frame">
+          <div class="frame__bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="frame__url">상태 정의</span></div>
+          <div class="frame__body">
+            <div class="grid3">
+              <div class="state">
+                <div class="plate plate--muted" style="margin:0 auto">LOADING</div>
+                <div class="skel" style="width:60%"></div>
+                <div class="skel" style="width:80%;height:26px"></div>
+                <div class="skel" style="width:100%;height:38px"></div>
+                <div class="state__d" style="margin-top:6px">스켈레톤으로 최종 레이아웃을 미리 잡아 화면 밀림을 없앱니다.</div>
+              </div>
+              <div class="state">
+                <div class="state__ic">☆</div>
+                <div class="state__t">아직 즐겨찾기가 없습니다</div>
+                <div class="state__d">관심 종목을 검색하고 별표를 누르면 여기에 모입니다.</div>
+                <div class="state__btn">종목 검색하기</div>
+              </div>
+              <div class="state">
+                <div class="state__ic" style="color:var(--down)">!</div>
+                <div class="state__t">데이터를 불러오지 못했습니다</div>
+                <div class="state__d">잠시 후 다시 시도해 주세요. 문제가 계속되면 마지막 갱신일을 확인해 주세요.</div>
+                <div class="state__btn">다시 시도</div>
+              </div>
+            </div>
+            <div style="margin-top:16px" class="quota">
+              <span class="plate">배치 지연</span>
+              <span>최근 갱신이 <b style="color:var(--text)">2026-08-12</b> 로 2일 이상 지연되었습니다. 표시된 판정은 해당 일자 기준입니다.</span>
+            </div>
+          </div>
+        </div>
+        <aside class="notes">
+          <h5>화면 주석</h5>
+          <ol>
+            <li><b>빈 화면은 안내가 아니라 행동 유도</b>입니다. "데이터 없음" 대신 다음에 할 일을 버튼으로 제시합니다.</li>
+            <li>오류 문구는 사과하지 않고 <b>무엇이 잘못됐고 무엇을 하면 되는지</b>만 말합니다.</li>
+            <li><b>배치 지연 배너</b>가 중요합니다. 배치가 실패하면 그날 전체 데이터가 비므로, 빈 화면을 보여주기보다 이전 데이터를 <b>날짜와 함께</b> 노출하는 편이 낫습니다.</li>
+            <li>서버 측에서는 2일 이상 갱신 실패 시 관리자에게 알림을 보냅니다. 사용자 신고로 장애를 인지하면 이미 늦습니다.</li>
+          </ol>
+          <div class="notes__spec">
+            상태 <span>loading / empty / error / stale</span><br>
+            재시도 <span>지수 백오프 3회</span>
+          </div>
+        </aside>
+      </article>
+
+      <!-- S-08 -->
+      <article class="screen" id="s08">
+        <div class="screen__hd">
+          <span class="screen__id">S-08</span>
+          <span class="screen__title">모바일 — 종목 상세</span>
+          <span class="screen__route">반응형 · 375px</span>
+        </div>
+        <div style="display:flex;gap:24px;flex-wrap:wrap">
+          <div class="frame frame--phone">
+            <div class="frame__bar"><span class="frame__url" style="margin-left:0">signaldesk.kr/stock/005930</span></div>
+            <div class="frame__body" style="padding:16px">
+              <div class="sym">
+                <div>
+                  <div class="sym__name" style="font-size:19px">삼성전자</div>
+                  <div class="sym__tick">005930 · KOSPI</div>
+                </div>
+                <div class="star" style="width:26px;height:26px;font-size:13px">★</div>
+              </div>
+              <div class="px" style="margin-top:8px">
+                <span class="px__now up" style="font-size:24px">78,500</span>
+                <span class="px__chg up" style="font-size:12px">+1.55%</span>
+              </div>
+              <div class="verdict" style="padding:14px;margin-top:14px">
+                <div class="verdict__hd" style="margin-bottom:12px">
+                  <span class="verdict__zone up" style="font-size:17px">매수 구간</span>
+                  <span class="verdict__score">+<b>42</b></span>
+                </div>
+                <div class="gauge" data-score="42" style="height:44px">
+                  <div class="gauge__track">
+                    <div class="gauge__band b1"></div><div class="gauge__band b2"></div>
+                    <div class="gauge__band b3"></div><div class="gauge__band b4"></div>
+                    <div class="gauge__band b5"></div>
+                  </div>
+                  <div class="gauge__ticks"></div>
+                  <div class="gauge__needle" style="left:50%;height:26px"></div>
+                </div>
+                <div class="verdict__sum" style="font-size:12px">정배열 유지 + 거래량 2.1배. VIX 상승은 부담.</div>
+                <div class="tags">
+                  <span class="tag tag--pos">정배열</span><span class="tag tag--pos">거래량 2.1×</span><span class="tag tag--neg">VIX↑</span>
+                </div>
+              </div>
+              <div class="chart-wrap" style="margin-top:14px;padding:10px">
+                <svg class="chart-svg" id="mockChartM" viewBox="0 0 420 300" role="img" aria-label="모바일 차트 목업"></svg>
+              </div>
+              <div class="card" style="margin-top:12px">
+                <div class="card__hd"><span class="card__t">추세 25%</span><span class="card__v up">+20</span></div>
+                <div class="bar"><div class="bar__f" style="width:80%"></div></div>
+              </div>
+            </div>
+          </div>
+          <aside class="notes" style="flex:1;min-width:250px">
+            <h5>화면 주석</h5>
+            <ol>
+              <li>모바일에서도 <b>판정 카드가 첫 화면에</b> 들어와야 합니다. 종목명·현재가를 1줄로 압축해 스크롤 없이 게이지까지 노출합니다.</li>
+              <li>요약 문장은 모바일에서 <b>1~2줄로 축약</b>합니다. 데스크톱 3문장을 그대로 넣으면 게이지가 접힙니다.</li>
+              <li>차트는 <b>오버레이 기본 2개</b>(BB + MA20)만 켜고 나머지는 접습니다. 좁은 폭에서 5개 선은 읽히지 않습니다.</li>
+              <li>지표 카드는 <b>아코디언</b>으로 접어 기본 상태에서는 그룹 점수만 보이게 합니다.</li>
+              <li>1차에서는 앱을 만들지 않습니다. 반응형 웹으로 커버하고, RN 앱은 3차에서 검토합니다.</li>
+            </ol>
+          </aside>
+        </div>
+      </article>
+    </section>
+
+    <!-- ══════════════════ 2차 ══════════════════ -->
+    <section class="phase" data-phase="p2">
+      <div class="phase__head">
+        <span class="plate">PHASE 2</span>
+        <h2>2차 개발 — 계정과 수익화</h2>
+      </div>
+      <p class="phase__desc">1차 트래픽으로 "어떤 종목이 얼마나 조회되는지" 데이터를 확보한 뒤 진입합니다. 로그인·조회 한도·결제를 한 묶음으로 개발합니다.</p>
+
+      <!-- S-09 -->
+      <article class="screen" id="s09">
+        <div class="screen__hd">
+          <span class="screen__id">S-09</span>
+          <span class="screen__title">조회 한도 배너</span>
+          <span class="screen__route">/stock/:ticker (3회차부터)</span>
+        </div>
+        <div class="frame">
+          <div class="frame__bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="frame__url">signaldesk.kr/stock/000660</span></div>
+          <div class="frame__body">
+            <div class="quota" style="margin-bottom:18px">
+              <span class="plate">무료 플랜</span>
+              <span>오늘 <span class="quota__c">2</span>종목 더 확인할 수 있습니다. (3 / 5 사용)</span>
+              <span class="quota__cta">무제한으로 보기 →</span>
+            </div>
+            <div class="sym">
+              <div><div class="sym__name">SK하이닉스</div><div class="sym__tick">000660 · KOSPI · KRW</div></div>
+              <div class="star">☆</div>
+            </div>
+            <div class="px">
+              <span class="px__now up">204,000</span>
+              <span class="px__chg up">▲ 1,500 (+0.74%)</span>
+              <span class="px__asof">2026-08-14 종가</span>
+            </div>
+            <div class="verdict">
+              <div class="verdict__hd">
+                <span class="plate">종합 판정</span>
+                <span class="verdict__zone up" style="color:rgba(242,84,91,.8)">매수 우위</span>
+                <span class="verdict__score">SCORE <b>+24</b> / 100</span>
+              </div>
+              <div class="gauge" data-score="24">
+                <div class="gauge__track">
+                  <div class="gauge__band b1"></div><div class="gauge__band b2"></div>
+                  <div class="gauge__band b3"></div><div class="gauge__band b4"></div>
+                  <div class="gauge__band b5"></div>
+                </div>
+                <div class="gauge__ticks"></div>
+                <div class="gauge__needle" style="left:50%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <aside class="notes">
+          <h5>화면 주석</h5>
+          <ol>
+            <li>배너는 <b>3회차부터</b> 노출합니다. 1~2회차에 붙이면 서비스 가치를 느끼기 전에 결제 요구부터 받게 됩니다.</li>
+            <li>문구는 남은 개수를 강조합니다. "2회 남았습니다"가 "3회 사용했습니다"보다 행동을 유발합니다.</li>
+            <li><b>카운팅은 서버에서 원자적으로</b> 처리합니다. 클라이언트 숫자는 표시용일 뿐 신뢰하지 않습니다.<br>
+              <code style="font-family:var(--mono);font-size:10.5px;color:var(--muted)">INSERT ... ON CONFLICT DO UPDATE SET view_count = view_count + 1 RETURNING view_count</code></li>
+            <li><b>같은 종목 재조회는 24시간 내 1회</b>로만 셉니다. 새로고침 한 번에 카운트가 깎이면 즉시 이탈합니다. 조회한 티커 배열을 저장해 중복을 판별합니다.</li>
+            <li>비로그인 식별은 <code style="font-family:var(--mono);font-size:10.5px;color:var(--muted)">deviceId + IP 해시</code>. 시크릿 모드로 우회 가능하지만, 목적은 완벽한 차단이 아니라 <b>로그인 유도</b>입니다.</li>
+            <li>리셋은 KST 자정 기준.</li>
+          </ol>
+          <div class="notes__spec">
+            테이블 <span>view_quota (subject_key, quota_date) PK</span><br>
+            노출조건 <span>view_count &gt;= 3</span>
+          </div>
+        </aside>
+      </article>
+
+      <!-- S-10 -->
+      <article class="screen" id="s10">
+        <div class="screen__hd">
+          <span class="screen__id">S-10</span>
+          <span class="screen__title">페이월 (한도 초과)</span>
+          <span class="screen__route">/stock/:ticker (6회차)</span>
+        </div>
+        <div class="frame">
+          <div class="frame__bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="frame__url">signaldesk.kr/stock/247540</span></div>
+          <div class="frame__body">
+            <div class="sym">
+              <div><div class="sym__name">에코프로비엠</div><div class="sym__tick">247540 · KOSDAQ · KRW</div></div>
+            </div>
+            <div class="px">
+              <span class="px__now down">142,300</span>
+              <span class="px__chg down">▼ 4,720 (-3.21%)</span>
+            </div>
+            <div class="blurwrap">
+              <div class="blurred">
+                <div class="verdict">
+                  <div class="verdict__hd">
+                    <span class="plate">종합 판정</span>
+                    <span class="verdict__zone down">매도 우위</span>
+                    <span class="verdict__score">SCORE <b>-34</b> / 100</span>
+                  </div>
+                  <div class="gauge">
+                    <div class="gauge__track">
+                      <div class="gauge__band b1"></div><div class="gauge__band b2"></div>
+                      <div class="gauge__band b3"></div><div class="gauge__band b4"></div>
+                      <div class="gauge__band b5"></div>
+                    </div>
+                    <div class="gauge__needle" style="left:33%"></div>
+                  </div>
+                  <div class="verdict__sum">20일선 이탈 후 거래량 동반 하락. 볼린저 하단 근접.</div>
+                </div>
+                <div class="grid2" style="margin-top:12px">
+                  <div class="card"><div class="card__hd"><span class="card__t">추세</span><span class="card__v down">-18</span></div><div class="bar"><div class="bar__f" style="width:70%"></div></div></div>
+                  <div class="card"><div class="card__hd"><span class="card__t">모멘텀</span><span class="card__v down">-12</span></div><div class="bar"><div class="bar__f" style="width:48%"></div></div></div>
+                </div>
+              </div>
+              <div class="paywall">
+                <div class="plate" style="margin-bottom:12px">오늘의 무료 조회 5종목 소진</div>
+                <h4>내일 자정에 다시 열립니다</h4>
+                <p>지금 바로 이어서 보시려면 스탠다드로 전환하세요. 조회 무제한, 즐겨찾기 50종목, 판정 근거 전체를 제공합니다.</p>
+                <a class="btn" href="#s11">스탠다드 시작하기</a>
+                <a class="btn btn--ghost" href="#s12">로그인하고 이어보기</a>
+              </div>
+            </div>
+          </div>
+        </div>
+        <aside class="notes">
+          <h5>화면 주석</h5>
+          <ol>
+            <li><b>종목명과 현재가는 블러 처리하지 않습니다.</b> 여기까지는 공개 정보이고, 검색으로 들어온 사용자가 빈손으로 돌아가면 재방문하지 않습니다.</li>
+            <li>블러 처리 대상은 <b>판정과 근거</b> — 유료 가치가 있는 부분입니다. 형태가 비치도록 blur(5px) 수준으로 조절해 "무엇을 못 보고 있는지"가 전달되게 합니다.</li>
+            <li><b>블러는 시각 효과일 뿐</b> 보안이 아닙니다. 서버 응답에서 판정 필드를 아예 제거해야 합니다. CSS만 걸면 개발자도구로 즉시 노출됩니다.</li>
+            <li>1차 CTA는 결제, 2차 CTA는 로그인. 결제 저항이 큰 사용자를 계정으로라도 잡아둡니다.</li>
+            <li>"내일 자정에 다시 열립니다"로 <b>영구 차단이 아님</b>을 명시해 이탈 압력을 낮춥니다.</li>
+          </ol>
+          <div class="notes__spec">
+            서버 <span>402 응답 시 signal 필드 제거</span><br>
+            추적 <span>paywall_view / paywall_cta_click 이벤트</span>
+          </div>
+        </aside>
+      </article>
+
+      <!-- S-11 -->
+      <article class="screen" id="s11">
+        <div class="screen__hd">
+          <span class="screen__id">S-11</span>
+          <span class="screen__title">요금제</span>
+          <span class="screen__route">/pricing</span>
+        </div>
+        <div class="frame">
+          <div class="frame__bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="frame__url">signaldesk.kr/pricing</span></div>
+          <div class="frame__body">
+            <div style="text-align:center;margin-bottom:24px">
+              <div class="plate plate--muted" style="margin-bottom:12px">PRICING</div>
+              <div style="font-size:21px;font-weight:700">필요한 만큼만</div>
+            </div>
+            <div class="plans">
+              <div class="plan">
+                <div class="plan__n">FREE</div>
+                <div class="plan__p">0<small>원</small></div>
+                <ul>
+                  <li class="yes">일 5종목 조회</li>
+                  <li class="yes">즐겨찾기 5종목</li>
+                  <li class="yes">차트 · 지표 열람</li>
+                  <li>판정 근거 전체</li>
+                  <li>과거 시그널 이력</li>
+                  <li>시그널 전환 알림</li>
+                </ul>
+                <div class="btn btn--ghost">현재 플랜</div>
+              </div>
+              <div class="plan plan--hi">
+                <div class="plan__n" style="color:var(--brass)">STANDARD</div>
+                <div class="plan__p">—<small> 원 / 월</small></div>
+                <div style="font-family:var(--mono);font-size:10.5px;color:var(--dim);margin-bottom:4px">가격 미확정 · 확인 필요</div>
+                <ul>
+                  <li class="yes">조회 <b style="color:var(--text)">무제한</b></li>
+                  <li class="yes">즐겨찾기 50종목</li>
+                  <li class="yes">차트 · 지표 열람</li>
+                  <li class="yes">판정 근거 전체</li>
+                  <li class="yes">과거 시그널 이력 1년</li>
+                  <li class="yes">시그널 전환 알림 <span style="color:var(--dim)">(3차)</span></li>
+                </ul>
+                <div class="btn">시작하기</div>
+              </div>
+            </div>
+            <div style="margin-top:16px;border:1px dashed var(--line);border-radius:3px;padding:13px;font-size:11.5px;color:var(--dim);line-height:1.6">
+              시그널데스크는 기술적 지표에 기반한 참고 정보를 제공하며 특정 종목의 매매를 권유하지 않습니다. 투자 판단과 그 결과에 대한 책임은 이용자 본인에게 있습니다.
+            </div>
+          </div>
+        </div>
+        <aside class="notes">
+          <h5>화면 주석</h5>
+          <ol>
+            <li>플랜은 <b>2개만</b> 둡니다. 1인 개발에서 3티어는 결제·권한 분기 비용만 늘립니다.</li>
+            <li>무료 플랜에 <b>못 쓰는 기능도 회색으로 표시</b>합니다. 빠진 항목을 지워버리면 유료 전환 이유가 사라집니다.</li>
+            <li>유료 전환 시 무료 즐겨찾기 한도가 5 → 50으로 늘어납니다. 1차의 20종목 한도는 2차 시점에 5로 조정하고 <b>기존 사용자는 유예</b>합니다.</li>
+            <li>결제는 <b>포트원(PortOne) 또는 토스페이먼츠</b> 정기결제 연동. 카드 정보는 직접 저장하지 않고 PG 빌링키만 보관합니다.</li>
+            <li class="notes__warn">구독 가격은 경쟁 서비스 조사 후 결정 — 현재 <b>확인이 필요합니다.</b></li>
+            <li class="notes__warn">유료로 투자 판단 정보를 제공하는 경우 <b>유사투자자문업 신고 대상 여부를 반드시 확인해야 합니다.</b> 오픈 전 전문가 검토 필요.</li>
+          </ol>
+          <div class="notes__spec">
+            결제 <span>PortOne / 토스페이먼츠 정기결제</span><br>
+            상태 <span>active / past_due / canceled</span>
+          </div>
+        </aside>
+      </article>
+
+      <!-- S-12 -->
+      <article class="screen" id="s12">
+        <div class="screen__hd">
+          <span class="screen__id">S-12</span>
+          <span class="screen__title">로그인 / 회원가입</span>
+          <span class="screen__route">/login</span>
+        </div>
+        <div style="display:flex;gap:24px;flex-wrap:wrap">
+          <div class="frame" style="flex:1;min-width:290px;max-width:430px">
+            <div class="frame__bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="frame__url">signaldesk.kr/login</span></div>
+            <div class="frame__body">
+              <div style="text-align:center;margin-bottom:22px">
+                <div class="ui-logo" style="font-size:15px">SIGNAL<span>·</span>DESK</div>
+                <div style="font-size:12.5px;color:var(--muted);margin-top:8px">즐겨찾기를 모든 기기에서 이어보세요</div>
+              </div>
+              <div class="field"><label>이메일</label><div>you@example.com</div></div>
+              <div class="field"><label>비밀번호</label><div>••••••••</div></div>
+              <div class="btn">로그인</div>
+              <div class="oauth"><div>Google</div><div>Kakao</div><div>Naver</div></div>
+              <div style="text-align:center;margin-top:18px;font-size:12px;color:var(--dim)">계정이 없으신가요? <span style="color:var(--brass)">회원가입</span></div>
+              <div class="quota" style="margin-top:20px;font-size:11.5px">
+                <span>이 브라우저의 즐겨찾기 <b style="color:var(--brass)">4종목</b>을 계정으로 옮깁니다.</span>
+              </div>
+            </div>
+          </div>
+          <aside class="notes" style="flex:1;min-width:250px">
+            <h5>화면 주석</h5>
+            <ol>
+              <li>로그인 이유를 <b>화면 안에서 설명</b>합니다. "기기 간 동기화"가 사용자가 이해하는 유일한 이유입니다.</li>
+              <li><b>소셜 로그인 우선</b>. Kakao/Naver는 국내 전환율에 직접 영향을 줍니다. Supabase Auth의 OAuth 프로바이더로 처리합니다.</li>
+              <li>로그인 직전 <b>localStorage 즐겨찾기 이관 안내</b>를 노출합니다. 로그인했더니 목록이 비어 있는 상황이 가장 큰 이탈 요인입니다.</li>
+              <li>이관은 <b>최초 1회만</b> 실행하고 플래그를 남깁니다. 매 로그인마다 병합하면 삭제한 종목이 되살아납니다.</li>
+              <li>Supabase Auth 사용 시 <b>RLS(Row Level Security)</b> 정책을 반드시 켭니다. 끄면 익명 키로 전체 테이블이 노출됩니다.</li>
+            </ol>
+            <div class="notes__spec">
+              인증 <span>Supabase Auth (Email + OAuth)</span><br>
+              보안 <span>RLS 필수 · favorites: auth.uid() = user_id</span>
+            </div>
+          </aside>
+        </div>
+      </article>
+    </section>
+
+    <!-- ══════════════════ 3차 ══════════════════ -->
+    <section class="phase" data-phase="p3">
+      <div class="phase__head">
+        <span class="plate">PHASE 3</span>
+        <h2>3차 개발 — 리텐션</h2>
+      </div>
+      <p class="phase__desc">여기부터는 와이어프레임 수준입니다. 2차까지의 사용 데이터를 보고 우선순위를 다시 정합니다. 아래는 현재 시점의 후보이며 확정 사양이 아닙니다.</p>
+
+      <article class="screen" id="s13">
+        <div class="screen__hd">
+          <span class="screen__id">S-13</span>
+          <span class="screen__title">시그널 전환 알림</span>
+          <span class="screen__route">/alerts</span>
+        </div>
+        <div class="frame">
+          <div class="frame__bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="frame__url">signaldesk.kr/alerts</span></div>
+          <div class="frame__body">
+            <div class="wire">
+              <div class="wire__t">알림 조건 설정</div>
+              <div class="wire__box"><span class="plate plate--muted">조건</span> 즐겨찾기 종목이 <b style="color:var(--text)">중립 → 매수</b> 구간으로 전환될 때</div>
+              <div class="wire__box"><span class="plate plate--muted">조건</span> 점수가 <b style="color:var(--text)">±40</b> 을 넘어설 때</div>
+              <div class="wire__box"><span class="plate plate--muted">채널</span> 이메일 · 웹푸시 · 카카오 알림톡(검토)</div>
+              <div class="wire__box"><span class="plate plate--muted">시각</span> 배치 완료 직후 (평일 장 마감 후 1회)</div>
+            </div>
+            <div class="wire" style="margin-top:12px">
+              <div class="wire__t">아침 요약 리포트</div>
+              <div class="wire__box">즐겨찾기 전 종목의 구간 변화를 1통으로 발송</div>
+              <div class="wire__box">구독자 전용 · 발송 시각 사용자 지정</div>
+            </div>
+          </div>
+        </div>
+        <aside class="notes">
+          <h5>화면 주석</h5>
+          <ol>
+            <li>알림은 <b>구독 유지의 핵심 장치</b>입니다. 매일 들어오지 않아도 서비스가 먼저 연락하면 해지율이 내려갑니다.</li>
+            <li>배치가 하루 1회이므로 알림도 <b>하루 1회</b>입니다. 실시간 알림은 데이터 구조상 불가능하며, 이를 사용자에게 명확히 알려야 합니다.</li>
+            <li>발송 실패·중복 방지를 위해 <b>발송 이력 테이블</b>(user_id, ticker, trade_date, UNIQUE)을 둡니다.</li>
+            <li class="notes__warn">알림 문구는 "매수 신호 발생" 같은 <b>권유형 표현을 피하고</b> "구간이 변경되었습니다"로 씁니다. 규제 리스크 관리 목적.</li>
+          </ol>
+        </aside>
+      </article>
+
+      <article class="screen" id="s14">
+        <div class="screen__hd">
+          <span class="screen__id">S-14</span>
+          <span class="screen__title">스크리너 · 백테스트</span>
+          <span class="screen__route">/screener</span>
+        </div>
+        <div class="frame">
+          <div class="frame__bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="frame__url">signaldesk.kr/screener</span></div>
+          <div class="frame__body">
+            <div class="wire">
+              <div class="wire__t">스크리너 — 유니버스 전체에서 구간별 종목 추출</div>
+              <div class="wire__box"><span class="plate plate--muted">필터</span> 시장 · 구간 · 점수 범위 · 거래대금</div>
+              <div class="wire__box"><span class="plate plate--muted">결과</span> 테이블 (종목 · 점수 · 구간 · 등락률 · 미니게이지)</div>
+              <div class="wire__box"><span class="plate plate--muted">구현</span> daily_signals 인덱스 스캔만으로 처리 — 추가 계산 없음</div>
+            </div>
+            <div class="wire" style="margin-top:12px">
+              <div class="wire__t">백테스트 리포트</div>
+              <div class="wire__box">"매수 구간 진입일에 매수, 중립 이탈 시 매도" 가정의 과거 성과</div>
+              <div class="wire__box">종목별 · 유니버스별 승률 / 평균 손익 / MDD</div>
+              <div class="wire__box"><span class="plate plate--muted">주의</span> 과거 성과가 미래를 보장하지 않는다는 고지 필수</div>
+            </div>
+            <div class="wire" style="margin-top:12px">
+              <div class="wire__t">React Native 앱</div>
+              <div class="wire__box">웹뷰 하이브리드로 시작 → 푸시·위젯만 네이티브</div>
+              <div class="wire__box">웹 트래픽이 앱 개발 비용을 정당화한 뒤 착수</div>
+            </div>
+          </div>
+        </div>
+        <aside class="notes">
+          <h5>화면 주석</h5>
+          <ol>
+            <li>스크리너는 <b>이미 계산된 daily_signals를 읽기만</b> 하면 되므로 개발 비용 대비 체감 가치가 가장 큽니다. 3차 1순위 후보.</li>
+            <li>백테스트는 가중치 검증 도구로 <b>내부에서 먼저 쓰고</b>, 결과가 설득력 있을 때만 공개합니다.</li>
+            <li>앱은 웹 지표(MAU·재방문율)를 먼저 확인한 뒤 결정합니다. 1인 개발에서 앱은 유지보수 채널이 하나 더 늘어나는 일입니다.</li>
+          </ol>
+        </aside>
+      </article>
+    </section>
+
+    <!-- 부록 -->
+    <section class="phase" id="appx">
+      <div class="phase__head">
+        <span class="plate plate--muted">APPENDIX</span>
+        <h2>판정 규칙표</h2>
+      </div>
+      <table class="tbl">
+        <thead><tr><th>점수</th><th>구간</th><th>표시 색</th><th>화면 문구</th></tr></thead>
+        <tbody>
+          <tr><td>+40 ~ +100</td><td>매수</td><td><span class="up">레드 (진함)</span></td><td>매수 구간</td></tr>
+          <tr><td>+15 ~ +40</td><td>매수 우위</td><td><span style="color:rgba(242,84,91,.75)">레드 (연함)</span></td><td>매수 우위</td></tr>
+          <tr><td>-15 ~ +15</td><td>중립</td><td><span class="neu">그레이</span></td><td>중립 구간</td></tr>
+          <tr><td>-40 ~ -15</td><td>매도 우위</td><td><span style="color:rgba(61,126,242,.75)">블루 (연함)</span></td><td>매도 우위</td></tr>
+          <tr><td>-100 ~ -40</td><td>매도</td><td><span class="down">블루 (진함)</span></td><td>매도 구간</td></tr>
+          <tr><td>—</td><td>판정 불가</td><td><span style="color:var(--dim)">딤</span></td><td>데이터 부족 · 거래정지</td></tr>
+        </tbody>
+      </table>
+
+      <table class="tbl" style="margin-top:30px">
+        <thead><tr><th>그룹</th><th>가중치</th><th>포함 지표</th></tr></thead>
+        <tbody>
+          <tr><td>추세</td><td>25%</td><td>MA 20/60/120 배열, 종가 vs MA20 이격</td></tr>
+          <tr><td>모멘텀</td><td>25%</td><td>RSI(14), MACD(12,26,9) 교차 및 히스토그램</td></tr>
+          <tr><td>밴드 위치</td><td>20%</td><td>볼린저 %B, 밴드폭(스퀴즈), 엔벨로프 ±10% 위치</td></tr>
+          <tr><td>거래량</td><td>15%</td><td>20일 평균 대비 배수, OBV 20일 추세</td></tr>
+          <tr><td>매크로</td><td>15%</td><td>VIX / VKOSPI, 미 10년물, USD/KRW, 지수 대비 상대강도</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <b>확인이 필요한 항목</b><br>
+        · 가중치·임계값 최적치 — 3~5년 백테스트 보정 전까지 위 값은 제안값입니다<br>
+        · 시세 API 최종 선정 및 상업적 이용·재배포 가능 여부<br>
+        · CNN Fear &amp; Greed Index 공식 API 부재 — VIX 대체 또는 자체 산출 필요<br>
+        · 유료화 시 유사투자자문업 신고 대상 여부 (자본시장법)<br>
+        · 구독 가격
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ── 단계 필터 ── */
+  var btns = document.querySelectorAll('.fbtn');
+  var phases = document.querySelectorAll('.phase[data-phase]');
+  btns.forEach(function(b){
+    b.addEventListener('click', function(){
+      var f = b.dataset.f;
+      btns.forEach(function(x){ x.setAttribute('aria-pressed', String(x === b)); });
+      phases.forEach(function(p){
+        p.classList.toggle('hidden', f !== 'all' && p.dataset.phase !== f);
+      });
+    });
+  });
+
+  /* ── 목차 활성화 ── */
+  var links = document.querySelectorAll('.toc a');
+  var targets = [].map.call(links, function(a){ return document.querySelector(a.getAttribute('href')); });
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if(!en.isIntersecting) return;
+      links.forEach(function(a, i){ a.classList.toggle('on', targets[i] === en.target); });
+    });
+  }, { rootMargin: '-88px 0px -70% 0px' });
+  targets.forEach(function(t){ if(t) io.observe(t); });
+
+  /* ── 게이지 눈금 + 바늘 ── */
+  document.querySelectorAll('.gauge__ticks').forEach(function(box){
+    for(var v = -100; v <= 100; v += 10){
+      var t = document.createElement('i');
+      t.className = 'gauge__tick' + (v % 50 === 0 ? ' gauge__tick--maj' : '');
+      t.style.left = ((v + 100) / 200 * 100) + '%';
+      box.appendChild(t);
+    }
+  });
+  var gio = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if(!en.isIntersecting) return;
+      var g = en.target;
+      var s = parseFloat(g.dataset.score);
+      var n = g.querySelector('.gauge__needle');
+      if(n && !isNaN(s)) n.style.left = ((s + 100) / 200 * 100) + '%';
+      gio.unobserve(g);
+    });
+  }, { threshold: 0.4 });
+  document.querySelectorAll('.gauge[data-score]').forEach(function(g){ gio.observe(g); });
+
+  /* ── 목업 차트 렌더 ── */
+  function mulberry32(a){
+    return function(){
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      var t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  function buildSeries(n, seed){
+    var rnd = mulberry32(seed), px = 100, out = [];
+    for(var i = 0; i < n; i++){
+      var drift = 0.16 + Math.sin(i / 11) * 0.42;
+      px = Math.max(45, px + drift + (rnd() - 0.5) * 3.4);
+      var o = px + (rnd() - 0.5) * 1.7;
+      var c = px + (rnd() - 0.5) * 1.7;
+      var h = Math.max(o, c) + rnd() * 1.5;
+      var l = Math.min(o, c) - rnd() * 1.5;
+      out.push({ o: o, h: h, l: l, c: c, v: 40 + rnd() * 80 + (Math.abs(c - o) * 14) });
+    }
+    return out;
+  }
+
+  function ns(tag, attrs){
+    var e = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    for(var k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+
+  function render(svgId, opts){
+    var svg = document.getElementById(svgId);
+    if(!svg) return;
+    var vb = svg.getAttribute('viewBox').split(' ').map(Number);
+    var W = vb[2], H = vb[3];
+    var padL = 8, padR = 46, padT = 10;
+    var priceH = H * 0.72, volH = H * 0.2, volTop = priceH + 18;
+
+    var N = opts.bars, P = 20;
+    var raw = buildSeries(N + P, opts.seed);
+    var data = raw.slice(P);
+
+    // 지표 계산
+    var ma = [], up = [], lo = [], eu = [], el = [];
+    for(var i = 0; i < data.length; i++){
+      var idx = i + P, sum = 0;
+      for(var j = idx - P + 1; j <= idx; j++) sum += raw[j].c;
+      var m = sum / P, vsum = 0;
+      for(var k = idx - P + 1; k <= idx; k++) vsum += Math.pow(raw[k].c - m, 2);
+      var sd = Math.sqrt(vsum / P);
+      ma.push(m); up.push(m + 2 * sd); lo.push(m - 2 * sd);
+      eu.push(m * 1.10); el.push(m * 0.90);
+    }
+
+    var all = [];
+    data.forEach(function(d){ all.push(d.h, d.l); });
+    all = all.concat(up, lo, eu, el);
+    var hi = Math.max.apply(null, all), low = Math.min.apply(null, all);
+    var span = (hi - low) || 1;
+    hi += span * 0.06; low -= span * 0.06; span = hi - low;
+
+    var plotW = W - padL - padR;
+    var step = plotW / data.length;
+    var bw = Math.max(1.5, step * 0.58);
+    var X = function(i){ return padL + step * i + step / 2; };
+    var Y = function(p){ return padT + (hi - p) / span * (priceH - padT); };
+
+    var f = document.createDocumentFragment();
+
+    // 그리드
+    for(var g = 0; g <= 4; g++){
+      var gy = padT + (priceH - padT) * g / 4;
+      f.appendChild(ns('line', { x1: padL, y1: gy, x2: W - padR, y2: gy, stroke: '#1A2C34', 'stroke-width': 1 }));
+      var lb = ns('text', { x: W - padR + 6, y: gy + 3.5, fill: '#4F6774', 'font-size': 9, 'font-family': 'IBM Plex Mono, monospace' });
+      lb.textContent = (hi - span * g / 4).toFixed(0);
+      f.appendChild(lb);
+    }
+
+    var path = function(arr){
+      return arr.map(function(v, i){ return (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1); }).join(' ');
+    };
+
+    // 볼린저 밴드 영역
+    var area = path(up) + ' L' + X(data.length - 1).toFixed(1) + ' ' + Y(lo[lo.length - 1]).toFixed(1) + ' ' +
+      lo.slice().reverse().map(function(v, i){ return 'L' + X(lo.length - 1 - i).toFixed(1) + ' ' + Y(v).toFixed(1); }).join(' ') + ' Z';
+    f.appendChild(ns('path', { d: area, fill: 'rgba(224,180,76,.07)', stroke: 'none' }));
+    f.appendChild(ns('path', { d: path(up), fill: 'none', stroke: '#E0B44C', 'stroke-width': 1.1, opacity: .75 }));
+    f.appendChild(ns('path', { d: path(lo), fill: 'none', stroke: '#E0B44C', 'stroke-width': 1.1, opacity: .75 }));
+    f.appendChild(ns('path', { d: path(ma), fill: 'none', stroke: '#7A939E', 'stroke-width': 1.1, opacity: .85 }));
+    // 엔벨로프
+    f.appendChild(ns('path', { d: path(eu), fill: 'none', stroke: '#3D7EF2', 'stroke-width': 1, 'stroke-dasharray': '4 4', opacity: .6 }));
+    f.appendChild(ns('path', { d: path(el), fill: 'none', stroke: '#3D7EF2', 'stroke-width': 1, 'stroke-dasharray': '4 4', opacity: .6 }));
+
+    // 캔들
+    data.forEach(function(d, i){
+      var col = d.c >= d.o ? '#F2545B' : '#3D7EF2';
+      f.appendChild(ns('line', { x1: X(i), y1: Y(d.h), x2: X(i), y2: Y(d.l), stroke: col, 'stroke-width': 1 }));
+      var top = Y(Math.max(d.o, d.c));
+      var hgt = Math.max(1, Math.abs(Y(d.o) - Y(d.c)));
+      f.appendChild(ns('rect', { x: X(i) - bw / 2, y: top, width: bw, height: hgt, fill: col }));
+    });
+
+    // 거래량
+    var vmax = Math.max.apply(null, data.map(function(d){ return d.v; }));
+    data.forEach(function(d, i){
+      var h = d.v / vmax * volH;
+      var col = d.c >= d.o ? 'rgba(242,84,91,.55)' : 'rgba(61,126,242,.55)';
+      f.appendChild(ns('rect', { x: X(i) - bw / 2, y: volTop + volH - h, width: bw, height: h, fill: col }));
+    });
+    // 거래량 20일 평균선
+    var vma = data.map(function(_, i){
+      var s = 0, c = 0;
+      for(var j = Math.max(0, i - 19); j <= i; j++){ s += data[j].v; c++; }
+      return s / c;
+    });
+    f.appendChild(ns('path', {
+      d: vma.map(function(v, i){ return (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + (volTop + volH - v / vmax * volH).toFixed(1); }).join(' '),
+      fill: 'none', stroke: '#E0B44C', 'stroke-width': 1, opacity: .6
+    }));
+    var vl = ns('text', { x: padL, y: volTop - 4, fill: '#4F6774', 'font-size': 9, 'font-family': 'IBM Plex Mono, monospace' });
+    vl.textContent = 'VOLUME';
+    f.appendChild(vl);
+
+    svg.appendChild(f);
+  }
+
+  render('mockChart', { bars: 62, seed: 20260814 });
+  render('mockChartM', { bars: 34, seed: 20260814 });
+})();
+</script>
+</body>
+</html>

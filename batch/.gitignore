@@ -1,0 +1,6 @@
+.venv/
+.env
+.kis_token.json
+__pycache__/
+*.pyc
+logs/
