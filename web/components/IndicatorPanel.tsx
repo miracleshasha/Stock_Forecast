@@ -1,5 +1,6 @@
 import type { Indicators, Macro, Signal } from "@/lib/types";
 import { formatNum, formatPct } from "@/lib/format";
+import Term from "./Term";
 
 type Tone = "up" | "down" | "neu";
 const pip = (t: Tone) => `pip pip--${t}`;
@@ -180,7 +181,7 @@ function Row({ tone, k, v }: { tone: Tone; k: string; v: string }) {
   return (
     <div className="row">
       <span className={pip(tone)} />
-      <span className="row__k">{k}</span>
+      <Term label={k} />
       <span className={`row__v ${tone === "neu" ? "" : tone}`}>{v}</span>
     </div>
   );

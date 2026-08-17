@@ -324,6 +324,58 @@ export async function getFavoriteRows(tickers: string[]): Promise<FavoriteRow[]>
   });
 }
 
+// ---------- 홈: 오늘의 매수/매도 신호 ----------
+export interface TopRow {
+  ticker: string;
+  name: string;
+  market: Market;
+  currency: "KRW" | "USD";
+  score: number;
+  zone: Zone;
+  price: number | null;
+  changePct: number | null;
+}
+
+export async function getTopSignals(
+  limit = 5,
+): Promise<{ buys: TopRow[]; sells: TopRow[] }> {
+  const sb = getSupabase();
+  if (!sb) return { buys: [], sells: [] };
+
+  const [buyRes, sellRes] = await Promise.all([
+    sb.from("v_latest_signal").select("ticker, score, zone").order("score", { ascending: false }).limit(limit),
+    sb.from("v_latest_signal").select("ticker, score, zone").order("score", { ascending: true }).limit(limit),
+  ]);
+  const buys = buyRes.data ?? [];
+  const sells = sellRes.data ?? [];
+  const tickers = [...buys, ...sells].map((r) => r.ticker as string);
+  if (tickers.length === 0) return { buys: [], sells: [] };
+
+  const [symRes, quotes] = await Promise.all([
+    sb.from("symbols").select("ticker, market, name_ko, name_en, currency").in("ticker", tickers),
+    getLatestQuotes(tickers),
+  ]);
+  const symMap = new Map((symRes.data ?? []).map((r) => [r.ticker as string, r]));
+
+  const build = (rows: { ticker: string; score: number; zone: string }[]): TopRow[] =>
+    rows.map((r) => {
+      const s = symMap.get(r.ticker);
+      const qt = quotes.get(r.ticker);
+      return {
+        ticker: r.ticker,
+        name: s ? displayName(s) : r.ticker,
+        market: (s?.market as Market) ?? "KOSPI",
+        currency: ((s?.currency as "KRW" | "USD") ?? "KRW"),
+        score: Number(r.score),
+        zone: r.zone as Zone,
+        price: qt?.close ?? null,
+        changePct: qt?.changePct ?? null,
+      };
+    });
+
+  return { buys: build(buys as never), sells: build(sells as never) };
+}
+
 async function latestSignals(
   tickers: string[],
 ): Promise<Map<string, { score: number; zone: Zone }>> {

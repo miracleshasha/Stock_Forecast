@@ -1,14 +1,17 @@
 import SearchBox from "@/components/SearchBox";
 import MarketSummary from "@/components/MarketSummary";
 import SetupNotice from "@/components/SetupNotice";
-import { getMacro } from "@/lib/db";
+import HomeScreener from "@/components/HomeScreener";
+import { getMacro, getTopSignals } from "@/lib/db";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const configured = isSupabaseConfigured();
-  const macro = configured ? await getMacro() : null;
+  const [macro, top] = configured
+    ? await Promise.all([getMacro(), getTopSignals(5)])
+    : [null, { buys: [], sells: [] }];
 
   return (
     <main className="shell shell--narrow">
@@ -28,7 +31,14 @@ export default async function HomePage() {
 
       <SearchBox autoFocus />
 
-      {!configured ? <SetupNotice /> : <MarketSummary macro={macro} />}
+      {!configured ? (
+        <SetupNotice />
+      ) : (
+        <>
+          <MarketSummary macro={macro} />
+          <HomeScreener buys={top.buys} sells={top.sells} />
+        </>
+      )}
     </main>
   );
 }
