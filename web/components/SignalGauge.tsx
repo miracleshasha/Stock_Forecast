@@ -19,6 +19,11 @@ export default function SignalGauge({ score }: { score: number }) {
         <span style={{ left: "72.7%" }}>+15</span>
         <span style={{ left: "100%" }}>+100</span>
       </div>
+      <div className="gauge__words">
+        <span className="w-sell">◀ 매도</span>
+        <span className="w-neu">중립</span>
+        <span className="w-buy">매수 ▶</span>
+      </div>
       <div className="gauge__needle" style={{ left: `${pct}%` }} />
     </div>
   );
