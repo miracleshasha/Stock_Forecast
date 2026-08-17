@@ -65,6 +65,17 @@ def delete_symbols(tickers: list[str]):
             raise RuntimeError(f"delete 실패 [{resp.status_code}]: {resp.text[:300]}")
 
 
+def patch(table: str, match: dict, body: dict):
+    """기존 행만 부분 업데이트(PATCH). 삽입/다른 컬럼 영향 없음."""
+    url = f"{config.SUPABASE_URL}/rest/v1/{table}"
+    params = {k: f"eq.{v}" for k, v in match.items()}
+    resp = requests.patch(
+        url, headers=_headers({"prefer": "return=minimal"}), params=params, json=body, timeout=30
+    )
+    if resp.status_code >= 300:
+        raise RuntimeError(f"patch {table} 실패 [{resp.status_code}]: {resp.text[:300]}")
+
+
 def upsert(table: str, rows: list[dict], on_conflict: str, chunk: int = 500):
     """merge-duplicates 업서트. rows를 chunk 단위로 나눠 전송."""
     if not rows:

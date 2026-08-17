@@ -17,6 +17,7 @@ import io
 import requests
 
 import supabase_io
+from us_ko_names import US_KO_NAMES
 
 SP500_CSV = "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/main/data/constituents.csv"
 
@@ -57,7 +58,7 @@ def _sp500() -> list[dict]:
         if not sym or "." in sym:  # 점 포함 티커(BRK.B 등)는 KIS 호환 이슈로 제외
             continue
         rows.append({
-            "ticker": sym, "market": "NASDAQ", "name_ko": None, "name_en": name,
+            "ticker": sym, "market": "NASDAQ", "name_ko": US_KO_NAMES.get(sym), "name_en": name,
             "universe": ["SP500"], "currency": "USD",
         })
     return rows
