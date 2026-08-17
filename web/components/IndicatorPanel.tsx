@@ -15,6 +15,41 @@ function scoreTag(v: number) {
   return { cls: t, text: `${v > 0 ? "+" : ""}${v}` };
 }
 
+// 그룹별 쉬운 요약 (초보자용) — 획득 점수 방향에 따라 문구 선택
+const GROUP_PLAIN: Record<string, { pos: string; neu: string; neg: string }> = {
+  trend: {
+    pos: "가격이 위로 흐르는 상승 추세예요.",
+    neu: "방향이 뚜렷하지 않은 흐름이에요.",
+    neg: "가격이 아래로 흐르는 하락 추세예요.",
+  },
+  momentum: {
+    pos: "오르는 힘(상승 탄력)이 붙어 있어요.",
+    neu: "오르내리는 힘이 팽팽해요.",
+    neg: "내리는 힘이 붙어 있어요.",
+  },
+  band: {
+    pos: "가격 위치가 안정적인 편이에요.",
+    neu: "가격 위치는 무난한 편이에요.",
+    neg: "가격 위치가 부담스러워요(하단이거나 과열).",
+  },
+  volume: {
+    pos: "매수세가 꾸준히 쌓이고 있어요.",
+    neu: "거래에서 뚜렷한 신호는 없어요.",
+    neg: "매도세가 꾸준히 나가고 있어요.",
+  },
+  macro: {
+    pos: "시장 전체 분위기가 우호적이에요.",
+    neu: "시장 전체 분위기는 중립이에요.",
+    neg: "시장 전체 분위기가 부담스러워요.",
+  },
+};
+
+function groupPlain(key: string, score: number): string {
+  const g = GROUP_PLAIN[key];
+  if (!g) return "";
+  return score > 3 ? g.pos : score < -3 ? g.neg : g.neu;
+}
+
 function barWidth(group: string, v: number) {
   const w = GROUP_WEIGHT[group] ?? 20;
   return `${Math.min(100, Math.round((Math.abs(v) / w) * 100))}%`;
@@ -132,6 +167,7 @@ export default function IndicatorPanel({
           <span className="card__t">시장 환경</span>
           <span className={`card__v ${scoreTag(bd.macro).cls}`}>{scoreTag(bd.macro).text}</span>
         </div>
+        <div className="card__plain">{groupPlain("macro", bd.macro)}</div>
         <Row tone={vixTone(macro?.vix ?? null)} k="VIX (공포지수)" v={formatNum(macro?.vix ?? null, 1)} />
         <Row tone="neu" k="VKOSPI" v={formatNum(macro?.vkospi ?? null, 1)} />
         <Row tone="neu" k="미 국채 10년물" v={macro?.us10y != null ? `${formatNum(macro.us10y)}%` : "—"} />
@@ -169,6 +205,7 @@ function Group({
         </span>
         <span className={`card__v ${st.cls}`}>{st.text}</span>
       </div>
+      <div className="card__plain">{groupPlain(key, value)}</div>
       {children}
       <div className="bar">
         <div className="bar__f" style={{ width: barWidth(key, value) }} />

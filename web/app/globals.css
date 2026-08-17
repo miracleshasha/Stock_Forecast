@@ -256,6 +256,7 @@ button { font-family: inherit; }
 .card__hd { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
 .card__t { font-family: var(--mono); font-size: 12px; letter-spacing: .1em; color: var(--dim); text-transform: uppercase; }
 .card__v { margin-left: auto; font-family: var(--mono); font-size: 15px; font-weight: 600; }
+.card__plain { font-size: 13.5px; color: var(--muted); line-height: 1.5; margin: -2px 0 10px; }
 .row { display: flex; align-items: center; gap: 10px; padding: 7px 0; font-size: 14px; border-bottom: 1px solid var(--line-soft); }
 .row:last-child { border-bottom: none; }
 .row__k { color: var(--dim); font-family: var(--mono); font-size: 12.5px; }
@@ -319,12 +320,33 @@ button { font-family: inherit; }
 .screener__px { width: 84px; flex: none; text-align: right; font-family: var(--mono); font-size: 13.5px; line-height: 1.4; }
 
 /* ---------- 즐겨찾기 ---------- */
+/* 시그널 분포 요약 + 정렬 */
+.fav-summary { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.fav-summary__pill {
+  font-family: var(--mono); font-size: 13px; padding: 5px 11px; border-radius: 2px;
+  border: 1px solid var(--line); color: var(--muted);
+}
+.fav-summary__pill.up { color: var(--up); border-color: rgba(242, 84, 91, .4); }
+.fav-summary__pill.down { color: var(--down); border-color: rgba(61, 126, 242, .4); }
+.fav-summary__pill.neu { color: var(--neutral); }
+.seg { margin-left: auto; display: flex; border: 1px solid var(--line); border-radius: 2px; overflow: hidden; }
+.seg__btn {
+  font-family: var(--mono); font-size: 12.5px; padding: 6px 12px; background: transparent;
+  border: none; border-right: 1px solid var(--line); color: var(--muted); cursor: pointer;
+}
+.seg__btn:last-child { border-right: none; }
+.seg__btn:hover:not(.seg__btn--on) { color: var(--text); }
+.seg__btn--on { background: var(--brass); color: #151007; font-weight: 600; }
+
 .fav {
   display: flex; align-items: center; gap: 14px; border: 1px solid var(--line);
   border-radius: var(--r); background: var(--panel2); padding: 13px 15px; margin-bottom: 9px;
-  transition: border-color .15s;
+  transition: border-color .15s, background .15s; cursor: pointer;
 }
-.fav:hover { border-color: var(--brass-dim); }
+.fav:hover { border-color: var(--brass-dim); background: rgba(224, 180, 76, .04); }
+.fav--up { box-shadow: inset 3px 0 0 var(--up); }
+.fav--down { box-shadow: inset 3px 0 0 var(--down); }
+.fav--neu { box-shadow: inset 3px 0 0 var(--neutral); }
 .fav__nm { font-size: 16.5px; font-weight: 600; }
 .fav__tk { font-family: var(--mono); font-size: 12px; color: var(--dim); }
 .fav__gauge { width: 108px; flex: none; }
