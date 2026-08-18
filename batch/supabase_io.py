@@ -20,8 +20,12 @@ def _headers(extra: dict | None = None) -> dict:
 def get_active_symbols() -> list[dict]:
     """대상 종목 목록. batch는 이 테이블을 읽어 수집 대상을 정합니다."""
     url = f"{config.SUPABASE_URL}/rest/v1/symbols"
-    params = {"select": "ticker,market,name_ko,name_en,currency,is_active", "is_active": "eq.true"}
-    resp = requests.get(url, headers=_headers(), params=params, timeout=20)
+    params = {
+        "select": "ticker,market,name_ko,name_en,currency,is_active",
+        "is_active": "eq.true",
+        "limit": "10000",  # PostgREST 기본 1000행 캡 회피
+    }
+    resp = requests.get(url, headers=_headers(), params=params, timeout=30)
     resp.raise_for_status()
     return resp.json()
 
@@ -45,9 +49,13 @@ def get_prices(ticker: str) -> list[dict]:
 
 
 def get_signal_tickers() -> set[str]:
-    """daily_signals 에 존재하는 ticker 집합(데이터가 채워진 종목)."""
-    url = f"{config.SUPABASE_URL}/rest/v1/daily_signals"
-    resp = requests.get(url, headers=_headers(), params={"select": "ticker"}, timeout=30)
+    """시세가 채워진 ticker 집합.
+
+    daily_signals는 날짜별로 여러 행이 쌓이므로(>1000행), 티커당 1행인
+    v_latest_signal 뷰를 조회해 PostgREST 1000행 캡 문제를 피한다.
+    """
+    url = f"{config.SUPABASE_URL}/rest/v1/v_latest_signal"
+    resp = requests.get(url, headers=_headers(), params={"select": "ticker", "limit": "10000"}, timeout=30)
     resp.raise_for_status()
     return {r["ticker"] for r in resp.json()}
 

@@ -143,8 +143,14 @@ def main(argv: list[str]):
     config.require_supabase()
 
     symbols = supabase_io.get_active_symbols()
-    if argv:
-        wanted = set(argv)
+    missing_only = "--missing" in argv
+    tickers = [a for a in argv if not a.startswith("--")]
+    if missing_only:
+        # 아직 시세가 없는(새로 추가된) 종목만 처리
+        have = supabase_io.get_signal_tickers()
+        symbols = [s for s in symbols if s["ticker"] not in have]
+    elif tickers:
+        wanted = set(tickers)
         symbols = [s for s in symbols if s["ticker"] in wanted]
     if not symbols:
         raise SystemExit("대상 종목이 없습니다. db/seed_symbols.sql 을 먼저 실행했는지 확인하세요.")
