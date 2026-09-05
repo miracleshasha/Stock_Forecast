@@ -48,6 +48,50 @@ def get_prices(ticker: str) -> list[dict]:
     return rows
 
 
+def get_recent_prices(ticker: str, limit: int) -> list[dict]:
+    """최근 일봉 N행(오름차순). 증분 수집의 지표 워밍업 구간으로 사용.
+
+    실패하면 빈 리스트를 돌려주고, 호출자는 전량 재조회로 폴백합니다.
+    """
+    url = f"{config.SUPABASE_URL}/rest/v1/daily_prices"
+    params = {
+        "select": "trade_date,open,high,low,close,volume",
+        "ticker": f"eq.{ticker}",
+        "order": "trade_date.desc",
+        "limit": str(limit),
+    }
+    resp = requests.get(url, headers=_headers(), params=params, timeout=30)
+    resp.raise_for_status()
+    rows = resp.json()
+    rows.reverse()  # desc로 받아 최근 N행을 고른 뒤 오름차순으로 되돌림
+    for r in rows:
+        r["date"] = r["trade_date"].replace("-", "")
+    return rows
+
+
+def get_obv_at(ticker: str, date_ymd: str) -> float | None:
+    """특정 거래일(YYYYMMDD)에 저장돼 있는 OBV 값.
+
+    OBV는 누적합이라 계산 구간이 달라지면 절대값이 통째로 어긋납니다.
+    증분 계산 결과를 이 기준점에 맞춰 평행이동시켜 DB 시계열의 연속성을 유지합니다.
+    (기준점은 이번에 덮어쓰지 않는 날짜여야 하므로 재검증 윈도우 바로 앞을 씁니다.)
+    """
+    iso = f"{date_ymd[0:4]}-{date_ymd[4:6]}-{date_ymd[6:8]}"
+    url = f"{config.SUPABASE_URL}/rest/v1/daily_indicators"
+    params = {
+        "select": "obv",
+        "ticker": f"eq.{ticker}",
+        "trade_date": f"eq.{iso}",
+        "limit": "1",
+    }
+    resp = requests.get(url, headers=_headers(), params=params, timeout=30)
+    resp.raise_for_status()
+    rows = resp.json()
+    if not rows or rows[0].get("obv") is None:
+        return None
+    return float(rows[0]["obv"])
+
+
 def get_signal_tickers() -> set[str]:
     """시세가 채워진 ticker 집합.
 

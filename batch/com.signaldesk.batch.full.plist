@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.signaldesk.batch.full</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/wonmanjung/Project/Stock_prediction/batch/run_daily.sh</string>
+    <string>--full</string>
+  </array>
+
+  <!-- 토요일 09:00 KST. 400거래일 전량 재적재로 수정주가·누락분 정리.
+       (금요일 미국장 종가는 토 05:00 KST 확정 → 09:00이면 안전) -->
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict><key>Weekday</key><integer>6</integer><key>Hour</key><integer>9</integer><key>Minute</key><integer>0</integer></dict>
+  </array>
+
+  <key>RunAtLoad</key>
+  <false/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/wonmanjung/Project/Stock_prediction/batch/logs/launchd.full.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/wonmanjung/Project/Stock_prediction/batch/logs/launchd.full.err.log</string>
+</dict>
+</plist>

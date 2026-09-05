@@ -43,6 +43,31 @@ LOOKBACK_TRADING_DAYS = int(_get("LOOKBACK_TRADING_DAYS", "400"))
 # API 호출 간 지연(초). KIS 유량제한 회피용.
 REQUEST_DELAY_SEC = float(_get("REQUEST_DELAY_SEC", "0.2"))
 
+# ---- 증분 수집(하이브리드) ----
+# 평일 배치는 "마지막 저장일 이후"만 KIS에서 받아오고(증분), 지표 워밍업에 필요한
+# 과거 구간은 Supabase(daily_prices)에서 읽어 이어붙입니다.
+# 주말 배치(run.py --full)는 400일 전체를 다시 받아 수정주가·누락분을 정리합니다.
+#
+# DB에서 읽어올 워밍업 행수. MA120 + OBV 20일 추세 + MACD(EMA26) 수렴을 위해
+# 최소 200 이상 권장. 클수록 지표가 전량 재조회 결과에 가까워집니다.
+WARMUP_ROWS = int(_get("WARMUP_ROWS", "250"))
+
+# 증분 조회 시 최소로 요청할 행수(휴장 연휴 등으로 갭이 0에 가까울 때의 하한).
+MIN_INCREMENTAL_ROWS = int(_get("MIN_INCREMENTAL_ROWS", "5"))
+
+# 증분 모드에서도 최근 N거래일은 다시 받아 덮어씁니다.
+# 전량 재조회가 갖고 있던 "지난 며칠은 다음 실행이 알아서 고친다"는 자가치유 성질을
+# 유지하기 위한 장치입니다(거래량 정정, 미완성 행 등).
+REVISION_ROWS = int(_get("REVISION_ROWS", "3"))
+
+# 해외 종목: 정규장이 끝나지 않은 날짜의 행을 저장하지 않습니다.
+# KIS는 미국장 개장 전에도 그날 날짜의 행을 프리마켓 체결분만 담아 내려줍니다
+# (예: NVDA 2026-09-04 거래량 41만 vs 정규장 1.35억). 전량 재조회 시절에는 다음 날
+# 덮어써져 자연히 고쳐졌지만, 증분에서는 그대로 굳으므로 아예 걸러냅니다.
+# 미국장 D일 종가는 D+1 05:00 KST 확정 → 1시간 여유를 둬 06:00 이후를 완료로 판정.
+SKIP_INCOMPLETE_OVERSEAS = _get("SKIP_INCOMPLETE_OVERSEAS", "1").lower() not in ("0", "false", "no")
+OVERSEAS_SETTLE_HOURS = int(_get("OVERSEAS_SETTLE_HOURS", "30"))  # D 00:00 기준 +30h = D+1 06:00
+
 # 국내 지수 코드 (KIS 국내지수 일봉 조회용)
 KOSPI_INDEX_CODE = _get("KOSPI_INDEX_CODE", "0001")
 # VKOSPI 지수 코드. 확인 후 채우세요(비우면 매크로에서 VKOSPI 생략).

@@ -6,15 +6,28 @@
     → 종목별: 일봉 수집 → 지표 계산 → 스코어링
               → daily_prices / daily_indicators / daily_signals 업서트
 
+[수집 모드 — 하이브리드]
+  증분(기본, 평일 18:30): DB의 최근 REVISION_ROWS 거래일 이후만 KIS에서 받고, 지표
+      워밍업 구간(WARMUP_ROWS)은 daily_prices에서 읽어 이어붙입니다. 종목당 KIS 1회.
+  전량(--full, 토요일 09:00): 400거래일을 통째로 다시 받아 수정주가(액면분할 등)
+      소급 반영과 누락분 복구를 합니다. 종목당 KIS 4~5회.
+
+  DB에 이력이 없는 종목(신규 편입)은 증분 모드에서도 자동으로 전량 수집합니다.
+  증분도 최근 며칠은 매번 다시 받아 덮어쓰므로(REVISION_ROWS) 거래량 정정 같은
+  뒤늦은 변경은 다음 실행이 알아서 고칩니다.
+
 종목 단위로 재시도하며, 한 종목 실패가 전체를 막지 않습니다.
 사용법:
-  python run.py                # 전체 활성 종목
-  python run.py 005930 AAPL    # 특정 종목만
+  python run.py                # 전체 활성 종목(증분)
+  python run.py --full         # 전체 활성 종목(전량 재적재)
+  python run.py 005930 AAPL    # 특정 종목만(증분)
+  python run.py --full 005930  # 특정 종목만 전량
 """
 from __future__ import annotations
 
 import sys
 import traceback
+from datetime import datetime, timedelta
 
 import pandas as pd
 
@@ -74,36 +87,126 @@ def _indicator_rows(ticker: str, df: pd.DataFrame) -> list[dict]:
     return rows
 
 
-def process_symbol(sym: dict, macro: dict) -> bool:
+def _drop_incomplete(candles: list[dict]) -> list[dict]:
+    """정규장이 끝나지 않은 해외 일봉(프리마켓 체결분만 담긴 행)을 버립니다.
+
+    KIS는 미국장 개장 전에도 그날 날짜의 행을 내려주는데, 거래량이 정규장의 1%도
+    안 되는 미완성 값입니다. 이걸 저장하면 지표·판정이 통째로 왜곡됩니다.
+    """
+    if not config.SKIP_INCOMPLETE_OVERSEAS:
+        return candles
+    now = datetime.now()
+    return [
+        r for r in candles
+        if now >= datetime.strptime(r["date"], "%Y%m%d") + timedelta(hours=config.OVERSEAS_SETTLE_HOURS)
+    ]
+
+
+def _fetch_candles(sym: dict, target_rows: int) -> tuple[list[dict], str]:
+    """KIS 일봉 조회. 해외는 거래소 자동보정까지 처리해 (rows, market)을 반환."""
     ticker = sym["ticker"]
     market = sym["market"]
     currency = sym.get("currency", "KRW")
+
+    if currency == "KRW":
+        return kis_client.fetch_domestic_daily(ticker, target_rows), market
+
+    candles, real_market = kis_client.fetch_overseas_daily(ticker, market, target_rows)
+    # 저장된 market이 실제와 다르면 갱신
+    if candles and real_market != market:
+        supabase_io.upsert(
+            "symbols", [{"ticker": ticker, "market": real_market, "currency": currency}], "ticker"
+        )
+    return _drop_incomplete(candles), real_market
+
+
+def _rows_needed_since(anchor_date: str) -> int:
+    """기준일(재검증 윈도우 시작점) 이후를 덮는 데 필요한 행수.
+
+    거래일 수 ≤ 달력일 수 이므로 달력일 기준으로 잡으면 갭을 반드시 포함합니다.
+    (연휴·장기 중단으로 갭이 커지면 자동으로 여러 페이지를 받습니다.)
+    """
+    gap = (datetime.now() - datetime.strptime(anchor_date, "%Y%m%d")).days
+    return max(config.MIN_INCREMENTAL_ROWS, min(config.LOOKBACK_TRADING_DAYS, gap + 2))
+
+
+def _load_history(ticker: str, full: bool) -> list[dict]:
+    """증분 모드에서 쓸 과거 일봉(워밍업). 실패하면 빈 리스트 → 전량 폴백."""
+    if full:
+        return []
+    try:
+        return supabase_io.get_recent_prices(ticker, config.WARMUP_ROWS)
+    except Exception as e:  # noqa: BLE001
+        print(f"  ! {ticker} 이력 조회 실패({e}) → 전량 수집으로 폴백")
+        return []
+
+
+def _align_obv(ticker: str, df: pd.DataFrame, anchor_date: str):
+    """OBV 누적합 기준점을 DB에 저장된 값에 맞춰 평행이동.
+
+    OBV는 계산 구간 시작점부터의 누적합이라 워밍업 구간이 달라지면 절대값이
+    통째로 어긋납니다. 웹이 OBV 절대값을 그대로 표시하므로 연속성을 맞춥니다.
+    기준일은 이번에 덮어쓰지 않는 날짜(재검증 윈도우 바로 앞)여야 합니다.
+    """
+    try:
+        a_obv = supabase_io.get_obv_at(ticker, anchor_date)
+    except Exception:  # noqa: BLE001
+        return
+    if a_obv is None:
+        return
+    hit = df.index[df["date"] == anchor_date]
+    if len(hit) == 0 or pd.isna(df.loc[hit[0], "obv"]):
+        return
+    df["obv"] = df["obv"] + (a_obv - float(df.loc[hit[0], "obv"]))
+
+
+def process_symbol(sym: dict, macro: dict, full: bool = False) -> bool:
+    ticker = sym["ticker"]
+    currency = sym.get("currency", "KRW")
     name = sym.get("name_ko") or sym.get("name_en") or ticker
 
-    # 1) 일봉 수집
-    if currency == "KRW":
-        candles = kis_client.fetch_domestic_daily(ticker, config.LOOKBACK_TRADING_DAYS)
+    # 1) 과거 이력(증분 모드) → 기준일과 요청할 행수 결정.
+    #    기준일 = 최근 REVISION_ROWS 거래일 바로 앞. 그 이후는 전부 다시 받아 덮어씁니다.
+    hist = _load_history(ticker, full)
+    if len(hist) > config.REVISION_ROWS:
+        anchor_date = hist[-(config.REVISION_ROWS + 1)]["date"]
+        target_rows = _rows_needed_since(anchor_date)
+        mode = "증분"
     else:
-        candles, real_market = kis_client.fetch_overseas_daily(ticker, market, config.LOOKBACK_TRADING_DAYS)
-        # 거래소 자동보정: 저장된 market이 실제와 다르면 갱신
-        if candles and real_market != market:
-            supabase_io.upsert("symbols", [{"ticker": ticker, "market": real_market, "currency": currency}], "ticker")
-            market = real_market
+        hist = []            # 이력이 워밍업에 못 미치면 전량 수집
+        anchor_date = None
+        target_rows = config.LOOKBACK_TRADING_DAYS
+        mode = "전량"
 
+    # 2) 일봉 수집
+    candles, market = _fetch_candles(sym, target_rows)
     if not candles:
         print(f"  ✗ {ticker} {name}: 시세 없음")
         return False
 
-    # 2) 지표
-    df = indicators.compute(candles)
+    # 3) 이력 + 신규 병합(같은 날짜는 새로 받은 값이 우선)
+    if hist:
+        merged = {r["date"]: r for r in hist}
+        merged.update({r["date"]: r for r in candles})
+        rows = [merged[d] for d in sorted(merged)]
+        write_dates = {r["date"] for r in candles if r["date"] > anchor_date}
+    else:
+        rows = candles
+        write_dates = None  # 전량 = 전 구간 기록
 
-    # 3) 스코어링
+    # 4) 지표
+    df = indicators.compute(rows)
+    if hist:
+        _align_obv(ticker, df, anchor_date)
+
+    # 5) 스코어링 (매크로가 매일 바뀌므로 새 거래일이 없어도 판정은 갱신)
     index_ret20 = macro.get("_kospi_ret20") if currency == "KRW" else None
     sig = scoring.score_signal(df, macro, market, currency, index_ret20)
 
-    # 4) 업서트
-    supabase_io.upsert("daily_prices", _price_rows(ticker, df), "ticker,trade_date")
-    supabase_io.upsert("daily_indicators", _indicator_rows(ticker, df), "ticker,trade_date")
+    # 6) 업서트 — 증분이면 재검증 윈도우 이후만, 전량이면 전 구간
+    write_df = df if write_dates is None else df[df["date"].isin(write_dates)]
+    supabase_io.upsert("daily_prices", _price_rows(ticker, write_df), "ticker,trade_date")
+    supabase_io.upsert("daily_indicators", _indicator_rows(ticker, write_df), "ticker,trade_date")
 
     trade_date = kis_client.iso(str(df.iloc[-1]["date"]))
     supabase_io.upsert("daily_signals", [{
@@ -116,7 +219,9 @@ def process_symbol(sym: dict, macro: dict) -> bool:
         "tags": sig["tags"],
     }], "ticker,trade_date")
 
-    print(f"  ✓ {ticker} {name}: {sig['zone']} ({sig['score']:+d}) · {trade_date} · {len(df)}행")
+    written = len(write_df)
+    detail = f"{written}행 기록" if written else "기록할 행 없음"
+    print(f"  ✓ {ticker} {name}: {sig['zone']} ({sig['score']:+d}) · {trade_date} · {mode} {detail}")
     return True
 
 
@@ -135,13 +240,14 @@ def prune():
 
 
 def main(argv: list[str]):
-    if argv and argv[0] == "--prune":
+    if "--prune" in argv:
         prune()
         return
 
     config.require_kis()
     config.require_supabase()
 
+    full = "--full" in argv
     symbols = supabase_io.get_active_symbols()
     missing_only = "--missing" in argv
     tickers = [a for a in argv if not a.startswith("--")]
@@ -166,11 +272,11 @@ def main(argv: list[str]):
     else:
         print("  매크로 수집 실패(계속 진행)")
 
-    print(f"[2/2] 종목 {len(symbols)}개 처리…")
+    print(f"[2/2] 종목 {len(symbols)}개 처리… (모드: {'전량 재적재' if full else '증분'})")
     ok = fail = 0
     for sym in symbols:
         try:
-            if process_symbol(sym, macro):
+            if process_symbol(sym, macro, full):
                 ok += 1
             else:
                 fail += 1

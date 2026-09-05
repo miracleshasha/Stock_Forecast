@@ -5,6 +5,7 @@
 
 - 1차 MVP: 로그인·결제 없이 검색 → 판정. 즐겨찾기는 브라우저(localStorage) 저장.
 - 데이터 소스: **한국투자증권 KIS API** · 저장소: **Supabase(PostgreSQL)** · 갱신: 일 1회 배치
+  (평일은 증분 수집, 토요일은 전량 재적재 — 아래 "수집 모드" 참고)
 - 색상 규약: **상승 = 레드 / 하락 = 블루** (국내 관례)
 
 ```
@@ -44,7 +45,8 @@ cd batch
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 cp .env.example .env      # 값 채우기 (KIS 키 + Supabase)
-.venv/bin/python run.py            # 전체 종목
+.venv/bin/python run.py            # 전체 종목(증분)
+.venv/bin/python run.py --full     # 전체 종목(전량 재적재)
 .venv/bin/python run.py 005930 AAPL  # 특정 종목만
 ```
 
@@ -52,15 +54,46 @@ cp .env.example .env      # 값 채우기 (KIS 키 + Supabase)
 - 종목 단위로 재시도하며, 한 종목 실패가 전체를 막지 않습니다.
 - 3Y 차트까지 채우려면 `.env` 의 `LOOKBACK_TRADING_DAYS` 를 800 이상으로 (호출 증가).
 
+### 수집 모드 (하이브리드)
+
+| | 증분 (기본) | 전량 (`--full`) |
+|---|---|---|
+| 언제 | 평일 18:30 | 토요일 09:00 |
+| KIS에서 받는 구간 | 최근 `REVISION_ROWS`(3) 거래일 이후 | 400거래일 전부 |
+| 지표 워밍업 | `daily_prices`에서 `WARMUP_ROWS`(250)행 읽어 이어붙임 | 받아온 구간 그대로 |
+| **종목당 KIS 호출** | **1회** | 국내 5회 / 해외 4회 |
+| 하루 총 호출(670종목) | 약 672회 | 약 2,815회 |
+
+증분은 매번 **최근 3거래일을 다시 받아 덮어씁니다.** 전량 재조회가 갖고 있던
+"지난 며칠 값은 다음 실행이 알아서 고친다"는 자가치유 성질을 유지하기 위한 장치로,
+거래량 정정 같은 뒤늦은 변경이 그대로 굳는 것을 막습니다.
+수정주가(액면분할·유상증자) 소급 반영과 장기 누락 복구는 토요일 전량 재적재가 담당합니다.
+
+DB에 이력이 없는 신규 편입 종목은 증분 모드에서도 자동으로 전량 수집합니다.
+
+> **해외 미완성 행 차단**: KIS는 미국장 개장 전에도 그날 날짜의 행을 프리마켓 체결분만
+> 담아 내려줍니다(예: NVDA 2026-09-04 거래량 41만 vs 정규장 1.35억). 전량 재조회 시절에는
+> 다음 날 덮어써져 자연히 고쳐졌지만 증분에서는 굳어버리므로, 정규장 종료 전(D+1 06:00 KST
+> 이전) 행은 저장하지 않습니다. `SKIP_INCOMPLETE_OVERSEAS=0` 으로 끌 수 있습니다.
+
 ### 매일 자동 실행 (launchd, 설치됨)
-평일 18:30 KST 자동 실행되도록 macOS LaunchAgent가 설치되어 있습니다.
-- 정의: `batch/com.signaldesk.batch.plist` → `~/Library/LaunchAgents/` 에 복사됨
-- 래퍼: `batch/run_daily.sh` (로그: `batch/logs/batch-YYYYMMDD.log`, 30일 후 자동 삭제)
+macOS LaunchAgent 2개가 설치되어 있습니다.
+
+| Label | 시각 | 하는 일 |
+|---|---|---|
+| `com.signaldesk.batch` | 평일 18:30 | 증분 수집 |
+| `com.signaldesk.batch.full` | 토요일 09:00 | 전량 재적재 |
+
+- 정의: `batch/com.signaldesk.batch.plist`, `batch/com.signaldesk.batch.full.plist`
+  → `~/Library/LaunchAgents/` 에 복사됨
+- 래퍼: `batch/run_daily.sh` (로그: `batch/logs/batch-{incr,full}-YYYYMMDD.log`, 30일 후 자동 삭제)
+- 토요일 09:00인 이유: 금요일 미국장 종가가 토 05:00 KST에 확정되므로 그 이후여야 안전합니다.
 
 ```bash
-launchctl list | grep signaldesk                         # 등록 확인
-launchctl kickstart gui/$(id -u)/com.signaldesk.batch    # 지금 즉시 실행
-launchctl bootout   gui/$(id -u)/com.signaldesk.batch    # 해제(중단)
+launchctl list | grep signaldesk                              # 등록 확인
+launchctl kickstart gui/$(id -u)/com.signaldesk.batch         # 증분 즉시 실행
+launchctl kickstart gui/$(id -u)/com.signaldesk.batch.full    # 전량 즉시 실행
+launchctl bootout   gui/$(id -u)/com.signaldesk.batch.full    # 해제(중단)
 ```
 > Mac이 켜져 있어야 실행됩니다. 24/7 실행이 필요하면 GitHub Actions cron으로 이전 가능.
 
@@ -123,7 +156,8 @@ H거래일 뒤 수익률과의 순위상관(IC)으로 예측력을 측정, 그�
 
 - **매크로**: VIX·미10년물·USD/KRW·S&P500·달러지수는 **FRED 공개 CSV**로 연동됨(키 불필요,
   `batch/fred.py`). **VKOSPI만** 무료 소스가 없어 미연결 → 국내 종목은 VIX로 대체. KOSPI 지수는 KIS.
-- **KIS 해외 시세 이용 조건 / 호출 한도** — 확인 필요(대규모 유니버스 배치 시 유량제한 주의).
+- **KIS 해외 시세 이용 조건 / 호출 한도** — 확인 필요. 증분 전환으로 하루 2,815회 → 672회
+  (토요일만 2,815회)로 줄었습니다.
 - **KOSPI200/KOSDAQ150 정확한 구성종목** — KRX/pykrx 미응답으로 대형주 큐레이션 대체(확인 필요).
 - **스코어링 가중치** — `backtest.py` 1차 보정 완료(in-sample). out-of-sample 재검증 필요.
 - **2차(유료화) 시 유사투자자문업 신고 / 시세 재배포 라이선스** — 반드시 전문가 확인.
