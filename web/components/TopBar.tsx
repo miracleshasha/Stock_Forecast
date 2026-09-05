@@ -12,7 +12,7 @@ export default function TopBar() {
           <span className="brand__mark">
             SIGNAL<span>·</span>DESK
           </span>
-          <span className="brand__sub">종가 기준 일 1회</span>
+          <span className="brand__sub">판정 종가 기준 · 현재가 실시간</span>
         </Link>
         <nav className="navlinks">
           <Link href="/favorites" className={path === "/favorites" ? "on" : undefined}>
