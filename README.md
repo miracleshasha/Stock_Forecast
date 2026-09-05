@@ -79,21 +79,28 @@ DB에 이력이 없는 신규 편입 종목은 증분 모드에서도 자동으�
 ### 매일 자동 실행 (launchd, 설치됨)
 macOS LaunchAgent 2개가 설치되어 있습니다.
 
-| Label | 시각 | 하는 일 |
-|---|---|---|
-| `com.signaldesk.batch` | 평일 18:30 | 증분 수집 |
-| `com.signaldesk.batch.full` | 토요일 09:00 | 전량 재적재 |
+| Label | 시각 | 하는 일 | 종목 |
+|---|---|---|---|
+| `com.signaldesk.batch.us` | 평일 07:00 | 해외 증분 | 537 |
+| `com.signaldesk.batch` | 평일 18:30 | 국내 증분 | 133 |
+| `com.signaldesk.batch.full` | 토요일 09:00 | 전량 재적재 | 670 |
 
-- 정의: `batch/com.signaldesk.batch.plist`, `batch/com.signaldesk.batch.full.plist`
-  → `~/Library/LaunchAgents/` 에 복사됨
-- 래퍼: `batch/run_daily.sh` (로그: `batch/logs/batch-{incr,full}-YYYYMMDD.log`, 30일 후 자동 삭제)
-- 토요일 09:00인 이유: 금요일 미국장 종가가 토 05:00 KST에 확정되므로 그 이후여야 안전합니다.
+각 시장을 **그 시장이 닫힌 직후에만** 받습니다. 전 종목을 두 번 도는 게 아니라
+나눠서 한 번씩이므로, 하루 총 호출은 1회 배치 때와 같은 **673회**입니다.
+미국 시세 반영 지연은 13.5시간 → 2시간으로 줄어듭니다.
+
+- 07:00인 이유: 미국장 마감이 서머타임 05:00 / 해제기 06:00 KST → 07:00이면 항상 확정 이후.
+- 토요일 09:00인 이유: 금요일 미국장 종가가 토 05~06시 KST에 확정되므로 그 이후여야 안전합니다.
+  (그래서 해외 에이전트에는 토요일을 넣지 않았습니다 — 전량 재적재와 중복)
+- 정의: `batch/com.signaldesk.batch{,.us,.full}.plist` → `~/Library/LaunchAgents/` 에 복사됨
+- 래퍼: `batch/run_daily.sh` (로그: `batch/logs/batch-{incr-kr,incr-us,full}-YYYYMMDD.log`, 30일 후 삭제)
 
 ```bash
 launchctl list | grep signaldesk                              # 등록 확인
-launchctl kickstart gui/$(id -u)/com.signaldesk.batch         # 증분 즉시 실행
+launchctl kickstart gui/$(id -u)/com.signaldesk.batch.us      # 해외 즉시 실행
+launchctl kickstart gui/$(id -u)/com.signaldesk.batch         # 국내 즉시 실행
 launchctl kickstart gui/$(id -u)/com.signaldesk.batch.full    # 전량 즉시 실행
-launchctl bootout   gui/$(id -u)/com.signaldesk.batch.full    # 해제(중단)
+launchctl bootout   gui/$(id -u)/com.signaldesk.batch.us      # 해제(중단)
 ```
 > Mac이 켜져 있어야 실행됩니다. 24/7 실행이 필요하면 GitHub Actions cron으로 이전 가능.
 
@@ -108,6 +115,30 @@ launchctl bootout   gui/$(id -u)/com.signaldesk.batch.full    # 해제(중단)
   대형주 큐레이션(`batch/universe.py` 의 `KR_EXTRA`)으로 대체했습니다. **확인이 필요합니다.**
 
 ---
+
+## 실시간 현재가
+
+판정 점수는 **확정 일봉 기준을 그대로 유지**하고, 화면 상단의 현재가만 장중에 실시간으로
+얹습니다. `daily_prices` 에는 절대 장중 값을 쓰지 않습니다 — 미완성 봉이 섞이면
+MA·볼린저·RSI가 전부 오염되기 때문입니다.
+
+```
+브라우저 → /api/stock/[ticker]/quote → live_quotes(60초 캐시) → 없으면 KIS 현재가
+                                     → 장 마감이면 아예 호출 안 함 → 확정 종가 표시
+```
+
+- **테이블**: `db/schema_live_quotes.sql` 을 Supabase SQL Editor에서 실행하세요.
+  `live_quotes`(현재가 캐시) + `kis_token`(토큰 공유)이 생깁니다.
+- **토큰**: 웹은 발급하지 않습니다. KIS는 재발급에 분당 제한이 있고 서버리스는
+  콜드스타트마다 캐시가 날아가기 때문입니다. 배치가 하루 한 번 발급해 `kis_token` 에
+  넣어두고 웹은 읽어 씁니다. 테이블을 막 만든 직후라면:
+  ```bash
+  cd batch && .venv/bin/python kis_client.py --publish-token
+  ```
+- **호출량**: 종목당 60초에 1회가 상한(`QUOTE_TTL_SECONDS`). 장 마감 중에는 0회.
+  실제로는 보고 있는 종목만 조회되므로 하루 수십 회 수준입니다.
+- **폴백**: 토큰 없음·조회 실패·타임아웃·장 마감 → 전부 조용히 확정 종가를 보여줍니다.
+  KIS 키를 넣지 않으면 이 기능만 꺼지고 나머지는 그대로 동작합니다.
 
 ## 웹 실행 (읽기 경로)
 

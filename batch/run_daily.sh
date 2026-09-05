@@ -1,7 +1,8 @@
 #!/bin/bash
 # SignalDesk 일일 배치 래퍼 (launchd/cron에서 호출)
-#   run_daily.sh          평일 증분 수집
-#   run_daily.sh --full   주말 전량 재적재
+#   run_daily.sh --kr     평일 18:30 국내 증분 수집
+#   run_daily.sh --us     평일 07:00 해외 증분 수집
+#   run_daily.sh --full   토요일 09:00 전량 재적재
 set -uo pipefail
 
 DIR="/Users/wonmanjung/Project/Stock_prediction/batch"
@@ -10,6 +11,10 @@ mkdir -p "$LOG_DIR"
 
 if [[ " $* " == *" --full "* ]]; then
   MODE="full"
+elif [[ " $* " == *" --kr "* ]]; then
+  MODE="incr-kr"
+elif [[ " $* " == *" --us "* ]]; then
+  MODE="incr-us"
 else
   MODE="incr"
 fi

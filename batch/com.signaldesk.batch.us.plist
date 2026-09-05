@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.signaldesk.batch.us</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/wonmanjung/Project/Stock_prediction/batch/run_daily.sh</string>
+    <string>--us</string>
+  </array>
+
+  <!-- 평일(월~금) 07:00 KST. 미국장 마감 후 해외 종목만 증분 수집.
+       미국장 마감은 서머타임 05:00 / 해제기 06:00 KST → 07:00이면 항상 확정 이후. -->
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict><key>Weekday</key><integer>1</integer><key>Hour</key><integer>7</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Weekday</key><integer>2</integer><key>Hour</key><integer>7</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Weekday</key><integer>3</integer><key>Hour</key><integer>7</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Weekday</key><integer>4</integer><key>Hour</key><integer>7</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Weekday</key><integer>5</integer><key>Hour</key><integer>7</integer><key>Minute</key><integer>0</integer></dict>
+  </array>
+  <!-- 토요일은 넣지 않습니다. 금요일 미국장 종가(토 05~06시 KST 확정)는
+       같은 날 09:00 전량 재적재가 가져가므로 중복입니다. -->
+
+  <key>RunAtLoad</key>
+  <false/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/wonmanjung/Project/Stock_prediction/batch/logs/launchd.us.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/wonmanjung/Project/Stock_prediction/batch/logs/launchd.us.err.log</string>
+</dict>
+</plist>

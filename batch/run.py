@@ -17,8 +17,15 @@
   뒤늦은 변경은 다음 실행이 알아서 고칩니다.
 
 종목 단위로 재시도하며, 한 종목 실패가 전체를 막지 않습니다.
+[시장 분리]
+  각 시장은 그 시장이 닫힌 직후에만 받으면 됩니다. --kr / --us 로 대상을 나눠
+  국내는 18:30(장 마감 15:30 이후), 해외는 07:00(미국장 마감 05~06시 이후)에
+  돌립니다. 전 종목을 두 번 도는 게 아니므로 호출량은 하루 1회 때와 같습니다.
+
 사용법:
   python run.py                # 전체 활성 종목(증분)
+  python run.py --kr           # 국내 종목만(증분)
+  python run.py --us           # 해외 종목만(증분)
   python run.py --full         # 전체 활성 종목(전량 재적재)
   python run.py 005930 AAPL    # 특정 종목만(증분)
   python run.py --full 005930  # 특정 종목만 전량
@@ -251,6 +258,16 @@ def main(argv: list[str]):
     symbols = supabase_io.get_active_symbols()
     missing_only = "--missing" in argv
     tickers = [a for a in argv if not a.startswith("--")]
+
+    # 시장 필터: 국내장/미국장이 닫힌 직후에 각각 따로 돌리기 위한 분리
+    if "--kr" in argv:
+        symbols = [s for s in symbols if s.get("currency", "KRW") == "KRW"]
+        scope = "국내"
+    elif "--us" in argv:
+        symbols = [s for s in symbols if s.get("currency", "KRW") != "KRW"]
+        scope = "해외"
+    else:
+        scope = "전체"
     if missing_only:
         # 아직 시세가 없는(새로 추가된) 종목만 처리
         have = supabase_io.get_signal_tickers()
@@ -272,7 +289,7 @@ def main(argv: list[str]):
     else:
         print("  매크로 수집 실패(계속 진행)")
 
-    print(f"[2/2] 종목 {len(symbols)}개 처리… (모드: {'전량 재적재' if full else '증분'})")
+    print(f"[2/2] {scope} 종목 {len(symbols)}개 처리… (모드: {'전량 재적재' if full else '증분'})")
     ok = fail = 0
     for sym in symbols:
         try:

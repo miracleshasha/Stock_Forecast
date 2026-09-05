@@ -1,6 +1,7 @@
 import type { PriceInfo, Symbol } from "@/lib/types";
-import { MARKET_LABEL, changeTone, formatChange, formatPrice } from "@/lib/format";
+import { MARKET_LABEL } from "@/lib/format";
 import FavoriteStar from "./FavoriteStar";
+import LiveQuote from "./LiveQuote";
 
 export default function StockHeader({
   symbol,
@@ -10,7 +11,6 @@ export default function StockHeader({
   price: PriceInfo | null;
 }) {
   const name = symbol.nameKo || symbol.nameEn || symbol.ticker;
-  const tone = changeTone(price?.change);
   return (
     <div>
       <div className="sym">
@@ -22,15 +22,11 @@ export default function StockHeader({
         </div>
         <FavoriteStar ticker={symbol.ticker} market={symbol.market} />
       </div>
-      <div className="px">
-        <span className={`px__now ${tone}`}>
-          {formatPrice(price?.close, symbol.currency)}
-        </span>
-        <span className={`px__chg ${tone}`}>
-          {formatChange(price?.change, price?.changePct, symbol.currency)}
-        </span>
-        {price?.asOf && <span className="px__asof">{price.asOf} 종가</span>}
-      </div>
+      <LiveQuote
+        ticker={symbol.ticker}
+        currency={symbol.currency}
+        fallback={price}
+      />
     </div>
   );
 }

@@ -66,7 +66,9 @@ REVISION_ROWS = int(_get("REVISION_ROWS", "3"))
 # 덮어써져 자연히 고쳐졌지만, 증분에서는 그대로 굳으므로 아예 걸러냅니다.
 # 미국장 D일 종가는 D+1 05:00 KST 확정 → 1시간 여유를 둬 06:00 이후를 완료로 판정.
 SKIP_INCOMPLETE_OVERSEAS = _get("SKIP_INCOMPLETE_OVERSEAS", "1").lower() not in ("0", "false", "no")
-OVERSEAS_SETTLE_HOURS = int(_get("OVERSEAS_SETTLE_HOURS", "30"))  # D 00:00 기준 +30h = D+1 06:00
+# D 00:00 기준 +31h = D+1 07:00 KST. 서머타임 해제기(미국장 마감 06:00 KST)에도
+# 1시간 여유가 남도록 잡았습니다. 해외 배치를 07:00에 돌리는 근거이기도 합니다.
+OVERSEAS_SETTLE_HOURS = int(_get("OVERSEAS_SETTLE_HOURS", "31"))
 
 # 국내 지수 코드 (KIS 국내지수 일봉 조회용)
 KOSPI_INDEX_CODE = _get("KOSPI_INDEX_CODE", "0001")

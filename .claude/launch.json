@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "signaldesk-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/wonmanjung/Project/Stock_prediction/web", "run", "dev"],
+      "port": 3000
+    }
+  ]
+}

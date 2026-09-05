@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import requests
 
@@ -21,6 +21,27 @@ def _today() -> datetime:
 
 
 # ---------------------------------------------------------------- 토큰
+def _publish_token(token: str, expires_at: float):
+    """웹(읽기 경로)이 현재가 조회에 쓸 수 있도록 토큰을 Supabase에 공유.
+
+    웹이 직접 발급하지 않는 이유: KIS는 토큰 재발급에 분당 제한이 있고,
+    서버리스는 콜드스타트마다 캐시가 날아가 발급을 반복하게 됩니다.
+    발급은 배치가 하루 한 번만 하고 웹은 읽어 쓰기만 합니다.
+    """
+    if not (config.SUPABASE_URL and config.SUPABASE_SERVICE_ROLE_KEY):
+        return
+    try:
+        import supabase_io  # 지연 임포트: 시세만 쓰는 스크립트에 Supabase를 강제하지 않음
+        supabase_io.upsert("kis_token", [{
+            "id": 1,
+            "access_token": token,
+            "expires_at": datetime.fromtimestamp(expires_at, tz=timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }], "id")
+    except Exception as e:  # noqa: BLE001
+        print(f"  [kis] 토큰 공유 실패(배치는 계속 진행): {e}")
+
+
 def get_access_token() -> str:
     cache = config.TOKEN_CACHE
     if cache.exists():
@@ -44,7 +65,9 @@ def get_access_token() -> str:
     body = resp.json()
     token = body["access_token"]
     expires_in = int(body.get("expires_in", 86400))
-    cache.write_text(json.dumps({"access_token": token, "expires_at": time.time() + expires_in}))
+    expires_at = time.time() + expires_in
+    cache.write_text(json.dumps({"access_token": token, "expires_at": expires_at}))
+    _publish_token(token, expires_at)
     return token
 
 
@@ -229,3 +252,18 @@ def _finalize(out: dict, target_rows: int) -> list[dict]:
 def iso(d: str) -> str:
     """YYYYMMDD → YYYY-MM-DD"""
     return f"{d[0:4]}-{d[4:6]}-{d[6:8]}"
+
+
+if __name__ == "__main__":
+    # 캐시에 있는 토큰을 Supabase(kis_token)에 즉시 공유합니다.
+    # 테이블을 새로 만든 직후처럼, 다음 발급(하루 1회)까지 기다리기 곤란할 때 사용.
+    #   .venv/bin/python kis_client.py --publish-token
+    import sys
+
+    if "--publish-token" in sys.argv:
+        tok = get_access_token()
+        meta = json.loads(config.TOKEN_CACHE.read_text())
+        _publish_token(tok, meta["expires_at"])
+        print("토큰 공유 완료 (kis_token)")
+    else:
+        print("사용법: python kis_client.py --publish-token")

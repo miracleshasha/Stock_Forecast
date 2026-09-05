@@ -36,6 +36,22 @@ export interface PriceInfo {
   asOf: string; // YYYY-MM-DD
 }
 
+/** 장중 현재가. 판정 점수와 달리 확정 일봉이 아니라 실시간 값입니다. */
+export interface LiveQuote {
+  price: number;
+  prevClose: number | null;
+  change: number;
+  changePct: number;
+  fetchedAt: string; // ISO8601
+}
+
+export interface QuoteResponse {
+  /** 실시간 값인지 여부. false면 화면은 확정 종가를 그대로 씁니다. */
+  live: boolean;
+  marketOpen: boolean;
+  quote: LiveQuote | null;
+}
+
 /** breakdown: 그룹별 획득 점수 (-100~+100 정규화 기준 기여도) */
 export interface SignalBreakdown {
   trend: number;

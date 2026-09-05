@@ -9,9 +9,10 @@
   <array>
     <string>/bin/bash</string>
     <string>/Users/wonmanjung/Project/Stock_prediction/batch/run_daily.sh</string>
+    <string>--kr</string>
   </array>
 
-  <!-- 평일(월~금) 18:30 KST. 국내 종가 확정 후 증분 수집(종목당 KIS 1회). -->
+  <!-- 평일(월~금) 18:30 KST. 국내장 마감(15:30) 후 국내 종목만 증분 수집. -->
   <key>StartCalendarInterval</key>
   <array>
     <dict><key>Weekday</key><integer>1</integer><key>Hour</key><integer>18</integer><key>Minute</key><integer>30</integer></dict>
