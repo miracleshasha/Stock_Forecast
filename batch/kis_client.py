@@ -47,7 +47,10 @@ def get_access_token() -> str:
     if cache.exists():
         try:
             data = json.loads(cache.read_text())
-            if data.get("expires_at", 0) > time.time() + 60:
+            # 만료 직전까지 쓰지 않고 여유를 두고 갱신합니다. 장중에 만료되면
+            # 웹의 실시간 현재가가 다음 배치까지 종가로 폴백해 버립니다.
+            margin = config.TOKEN_MIN_REMAINING_HOURS * 3600
+            if data.get("expires_at", 0) > time.time() + margin:
                 return data["access_token"]
         except Exception:
             pass

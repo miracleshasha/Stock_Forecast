@@ -77,6 +77,12 @@ VKOSPI_INDEX_CODE = _get("VKOSPI_INDEX_CODE", "")
 
 TOKEN_CACHE = BASE_DIR / ".kis_token.json"
 
+# 남은 유효시간이 이 값 미만이면 배치가 토큰을 미리 재발급합니다.
+# KIS 토큰은 24시간짜리라, 만료 직전까지 쓰면 장중에 만료되는 구간이 생깁니다
+# (웹의 실시간 현재가가 그동안 종가로 폴백). 해외 배치(07:00)가 매일 갱신해
+# 국내장 마감(15:30)까지 확실히 덮도록 12시간을 기본값으로 둡니다.
+TOKEN_MIN_REMAINING_HOURS = float(_get("TOKEN_MIN_REMAINING_HOURS", "12"))
+
 
 def require_kis():
     if not KIS_APP_KEY or not KIS_APP_SECRET:
