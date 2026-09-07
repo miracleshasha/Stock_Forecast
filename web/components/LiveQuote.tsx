@@ -31,11 +31,16 @@ export default function LiveQuote({
           `/api/stock/${encodeURIComponent(ticker)}/quote`,
           { cache: "no-store" },
         );
-        if (!r.ok) return;
+        if (!r.ok) {
+          console.warn(`[LiveQuote] ${ticker} 응답 ${r.status} — 종가로 표시합니다`);
+          return;
+        }
         const body = (await r.json()) as QuoteResponse;
         if (alive) setRes(body);
-      } catch {
-        // 조회 실패는 조용히 무시 — 종가가 그대로 남습니다
+      } catch (e) {
+        // 화면은 종가로 폴백하되, 왜 실시간이 안 뜨는지는 콘솔에 남깁니다.
+        // (조용히 삼키면 장 마감인지 조회 실패인지 구분할 수 없습니다)
+        console.warn(`[LiveQuote] ${ticker} 조회 실패 — 종가로 표시합니다`, e);
       }
     }
 
