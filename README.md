@@ -145,6 +145,13 @@ MA·볼린저·RSI가 전부 오염되기 때문입니다.
   오해를 부릅니다. 그래서 **현재가가 DB의 마지막 확정 종가와 같으면 거래가 없는 것으로
   보고** 종가 표시로 넘깁니다. 공휴일 표를 관리할 필요가 없고 국내·해외 모두에 통합니다.
 - **폴백**: 토큰 없음·조회 실패·타임아웃·장 마감·휴장 → 전부 조용히 확정 종가를 보여줍니다.
+- **진단**: 실시간이 안 뜰 때 `/api/stock/<ticker>/quote` 를 직접 열면 `reason` 이 원인을
+  알려줍니다 — `market_closed`(정상) · `no_trading`(휴장) · `kis_not_configured`(KIS 키 없음) ·
+  `no_token`(kis_token 못 읽음) · `kis_failed`(KIS 호출 실패) · `supabase_missing`.
+- **웹은 서비스 롤 키가 필요합니다.** `kis_token` 은 RLS 정책을 두지 않아 anon/publishable
+  키로는 읽히지 않습니다(토큰이 공개되면 안 되므로 의도된 설계). 배포 환경에
+  `SUPABASE_SERVICE_ROLE_KEY` 가 없고 anon 키만 있으면 다른 화면은 멀쩡한데
+  실시간 현재가만 `no_token` 으로 조용히 꺼집니다.
   KIS 키를 넣지 않으면 이 기능만 꺼지고 나머지는 그대로 동작합니다.
 
 ## 웹 실행 (읽기 경로)

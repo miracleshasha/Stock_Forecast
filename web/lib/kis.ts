@@ -10,7 +10,7 @@
 // ============================================================
 
 import { getSupabase } from "./supabase";
-import type { Currency, LiveQuote, Market } from "./types";
+import type { Currency, LiveQuote, Market, QuoteSkipReason } from "./types";
 
 const BASE_URL =
   process.env.KIS_BASE_URL ?? "https://openapi.koreainvestment.com:9443";
@@ -43,10 +43,22 @@ async function getToken(): Promise<string | null> {
     .eq("id", 1)
     .maybeSingle();
 
-  if (error || !data) return null; // 테이블 미생성/미발급 → 종가로 폴백
+  // kis_token 은 RLS 정책을 두지 않아 서비스 롤 키로만 읽힙니다.
+  // anon 키로 배포됐다면 여기서 조용히 막히므로 원인을 남깁니다.
+  if (error) {
+    console.warn("[kis] kis_token 조회 실패(서비스 롤 키인지 확인):", error.message);
+    return null;
+  }
+  if (!data) {
+    console.warn("[kis] kis_token 행 없음 — 배치가 아직 토큰을 공유하지 않았습니다");
+    return null;
+  }
 
   const expiresAt = new Date(data.expires_at as string).getTime();
-  if (!Number.isFinite(expiresAt) || expiresAt <= now + 60_000) return null;
+  if (!Number.isFinite(expiresAt) || expiresAt <= now + 60_000) {
+    console.warn("[kis] kis_token 만료됨:", data.expires_at);
+    return null;
+  }
 
   memo = { token: data.access_token as string, expiresAt };
   return memo.token;
@@ -95,8 +107,12 @@ export async function fetchQuote(
   ticker: string,
   market: Market,
   currency: Currency,
-): Promise<LiveQuote | null> {
-  if (!isKisConfigured()) return null;
+): Promise<{ quote: LiveQuote | null; reason?: QuoteSkipReason }> {
+  if (!isKisConfigured()) {
+    console.warn("[kis] KIS_APP_KEY / KIS_APP_SECRET 미설정");
+    return { quote: null, reason: "kis_not_configured" };
+  }
+  if (!(await getToken())) return { quote: null, reason: "no_token" };
 
   let price: number | null = null;
   let prevClose: number | null = null;
@@ -108,7 +124,7 @@ export async function fetchQuote(
         "FHKST01010100",
         { FID_COND_MRKT_DIV_CODE: "J", FID_INPUT_ISCD: ticker },
       );
-      if (!out) return null;
+      if (!out) return { quote: null, reason: "kis_failed" };
       price = num(out.stck_prpr);      // 현재가
       prevClose = num(out.stck_sdpr);  // 전일 종가
     } else {
@@ -117,19 +133,22 @@ export async function fetchQuote(
         "HHDFS00000300",
         { AUTH: "", EXCD: EXCD_BY_MARKET[market] ?? "NAS", SYMB: ticker },
       );
-      if (!out) return null;
+      if (!out) return { quote: null, reason: "kis_failed" };
       price = num(out.last);   // 현재가
       prevClose = num(out.base); // 전일 종가
     }
-  } catch {
-    return null; // 타임아웃·네트워크 오류 → 종가 폴백
+  } catch (e) {
+    console.warn(`[kis] ${ticker} 현재가 조회 실패:`, e); // 타임아웃·네트워크 오류
+    return { quote: null, reason: "kis_failed" };
   }
 
-  if (price == null || price <= 0) return null;
+  if (price == null || price <= 0) return { quote: null, reason: "kis_failed" };
 
   const change = prevClose != null ? price - prevClose : 0;
   const changePct =
     prevClose != null && prevClose > 0 ? (change / prevClose) * 100 : 0;
 
-  return { price, prevClose, change, changePct, fetchedAt: new Date().toISOString() };
+  return {
+    quote: { price, prevClose, change, changePct, fetchedAt: new Date().toISOString() },
+  };
 }

@@ -45,11 +45,21 @@ export interface LiveQuote {
   fetchedAt: string; // ISO8601
 }
 
+/** live=false 인 이유. 배포 환경에서 로그를 못 볼 때 원인을 바로 알기 위한 값입니다. */
+export type QuoteSkipReason =
+  | "market_closed"      // 장 시간이 아님 (정상)
+  | "no_trading"         // 시계상 장중이나 거래 없는 세션(공휴일 등)
+  | "supabase_missing"   // Supabase 환경변수 없음
+  | "kis_not_configured" // KIS_APP_KEY / KIS_APP_SECRET 없음
+  | "no_token"           // kis_token 을 못 읽음(미발급·만료·권한)
+  | "kis_failed";        // KIS 호출 실패(오류·타임아웃)
+
 export interface QuoteResponse {
   /** 실시간 값인지 여부. false면 화면은 확정 종가를 그대로 씁니다. */
   live: boolean;
   marketOpen: boolean;
   quote: LiveQuote | null;
+  reason?: QuoteSkipReason;
 }
 
 /** breakdown: 그룹별 획득 점수 (-100~+100 정규화 기준 기여도) */

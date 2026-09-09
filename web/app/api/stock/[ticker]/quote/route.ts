@@ -10,14 +10,14 @@ import { getLastClose, getSymbol } from "@/lib/db";
 import { fetchQuote, isKisConfigured } from "@/lib/kis";
 import { isMarketOpen } from "@/lib/marketHours";
 import { getSupabase } from "@/lib/supabase";
-import type { LiveQuote, QuoteResponse } from "@/lib/types";
+import type { LiveQuote, QuoteResponse, QuoteSkipReason } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 const TTL_MS = Number(process.env.QUOTE_TTL_SECONDS ?? 60) * 1000;
 
-function closed(marketOpen = false): NextResponse {
-  const body: QuoteResponse = { live: false, marketOpen, quote: null };
+function closed(marketOpen: boolean, reason: QuoteSkipReason): NextResponse {
+  const body: QuoteResponse = { live: false, marketOpen, quote: null, reason };
   return NextResponse.json(body);
 }
 
@@ -28,13 +28,14 @@ export async function GET(
   const { ticker } = await ctx.params;
 
   const sb = getSupabase();
-  if (!sb || !isKisConfigured()) return closed();
+  if (!sb) return closed(false, "supabase_missing");
+  if (!isKisConfigured()) return closed(false, "kis_not_configured");
 
   const symbol = await getSymbol(ticker);
   if (!symbol) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
   const marketOpen = isMarketOpen(symbol.currency);
-  if (!marketOpen) return closed(false);
+  if (!marketOpen) return closed(false, "market_closed");
 
   // 거래가 없는 세션(공휴일 등) 판정용 기준값.
   //   isMarketOpen 은 시계만 보므로 공휴일(예: 미국 Labor Day)에도 개장으로 봅니다.
@@ -69,11 +70,15 @@ export async function GET(
   }
 
   // 2) KIS 조회
-  const quote = await fetchQuote(symbol.ticker, symbol.market, symbol.currency);
-  if (!quote) return closed(marketOpen);
+  const { quote, reason } = await fetchQuote(
+    symbol.ticker,
+    symbol.market,
+    symbol.currency,
+  );
+  if (!quote) return closed(marketOpen, reason ?? "kis_failed");
 
   // 2-1) 거래 없는 세션이면 종가 표시로 넘깁니다(캐시에 남기지도 않습니다).
-  if (noTrading(quote.price)) return closed(marketOpen);
+  if (noTrading(quote.price)) return closed(marketOpen, "no_trading");
 
   // 3) 캐시 갱신 (실패해도 응답에는 영향 없음)
   await sb
