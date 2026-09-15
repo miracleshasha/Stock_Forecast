@@ -75,6 +75,11 @@ KOSPI_INDEX_CODE = _get("KOSPI_INDEX_CODE", "0001")
 # VKOSPI 지수 코드. 확인 후 채우세요(비우면 매크로에서 VKOSPI 생략).
 VKOSPI_INDEX_CODE = _get("VKOSPI_INDEX_CODE", "")
 
+# 추세 보강 항목(ADX·MA20기울기·52주고가)을 스코어에 반영할지.
+# 2026-09 백테스트에서 예측력 개선이 확인되지 않아(차이가 표준오차 이내)
+# 기본 꺼짐입니다. 지표 자체는 계속 계산되므로 backtest 로 A/B 가능합니다.
+TREND_EXTRA = _get("TREND_EXTRA", "0").lower() not in ("0", "false", "no")
+
 TOKEN_CACHE = BASE_DIR / ".kis_token.json"
 
 # 남은 유효시간이 이 값 미만이면 배치가 토큰을 미리 재발급합니다.

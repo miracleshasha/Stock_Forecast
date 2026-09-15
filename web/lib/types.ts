@@ -68,9 +68,12 @@ export interface SignalBreakdown {
   momentum: number;
   band: number;
   volume: number;
+  /** 방향 기여 없음(항상 0). 매크로는 2026-09부터 확신도 감쇠로만 쓰입니다 */
   macro: number;
-  /** 지수 대비 20일 상대강도(%p). 매크로 점수 근거 표시용 */
+  /** 지수 대비 20일 상대강도(%p). 모멘텀 그룹의 근거 표시용 */
   rs20?: number | null;
+  /** 시장 불안정에 따른 확신도 배수(0.5~1.0). 1 미만이면 판정을 중립 쪽으로 당겼다는 뜻 */
+  damp?: number | null;
 }
 
 export interface Signal {
