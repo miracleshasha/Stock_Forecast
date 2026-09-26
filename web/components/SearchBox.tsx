@@ -59,16 +59,6 @@ export default function SearchBox({
     return () => clearTimeout(id);
   }, [q, composing]);
 
-  // 하단 탭 "검색"(/#search)으로 들어오면 입력창에 포커스
-  useEffect(() => {
-    const focusIfHash = () => {
-      if (window.location.hash === "#search") inputRef.current?.focus();
-    };
-    focusIfHash();
-    window.addEventListener("hashchange", focusIfHash);
-    return () => window.removeEventListener("hashchange", focusIfHash);
-  }, []);
-
   useEffect(() => {
     function onClick(e: MouseEvent) {
       if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
@@ -106,7 +96,7 @@ export default function SearchBox({
   }
 
   return (
-    <div className="searchbox" id="search" ref={boxRef}>
+    <div className="searchbox" ref={boxRef}>
       <label className={`search${open && results.length ? " search--focus" : ""}`}>
         {loading || navigating ? (
           <span className="spinner" aria-label="불러오는 중" />

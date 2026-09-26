@@ -128,7 +128,7 @@ button { font-family: inherit; color: inherit; }
 .divider { height: 1px; background: var(--line); }
 
 /* ---------- 검색 ---------- */
-.searchbox { position: relative; display: flex; flex-direction: column; gap: 10px; scroll-margin-top: 72px; }
+.searchbox { position: relative; display: flex; flex-direction: column; gap: 10px; }
 .search {
   display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 16px;
   background: var(--card); border-radius: 16px; border: 2px solid transparent; color: var(--cap);
