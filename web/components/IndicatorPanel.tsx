@@ -1,9 +1,9 @@
-import type { Indicators, Macro, Signal } from "@/lib/types";
+import type { Indicators, Signal } from "@/lib/types";
 import { formatNum, formatPct } from "@/lib/format";
+import Icon from "./Icon";
 import Term from "./Term";
 
 type Tone = "up" | "down" | "neu";
-const pip = (t: Tone) => `pip pip--${t}`;
 
 // batch/scoring.py WEIGHTS 와 일치해야 함
 const GROUP_WEIGHT: Record<string, number> = {
@@ -92,25 +92,15 @@ function pctBTone(v: number | null): Tone {
   if (v < 0.2) return "down";
   return "neu";
 }
-function vixTone(v: number | null): Tone {
-  if (v == null) return "neu";
-  if (v < 15) return "up";
-  if (v > 25) return "down";
-  return "neu";
-}
-
+/** 판정 근거: 그룹별 기여 점수와 쉬운 설명. 눌러 펼치면 세부 지표가 보입니다. */
 export default function IndicatorPanel({
   signal,
   indicators,
-  macro,
   close,
-  currency,
 }: {
   signal: Signal;
   indicators: Indicators | null;
-  macro: Macro | null;
   close: number | null;
-  currency: "KRW" | "USD";
 }) {
   const i = indicators;
   const bd = signal.breakdown;
@@ -119,113 +109,88 @@ export default function IndicatorPanel({
   const trendTone = maArrangeTone(i ?? ({} as Indicators));
 
   return (
-    <div>
-      <div className="plate plate--muted section-label">판정 근거 · 기여도순</div>
-      <div className="grid2">
-        {/* 추세 */}
-        <Group name="추세" weight={40} value={bd.trend}>
-          <Row tone={trendTone} k="MA 배열" v={i ? maArrangeText(i) : "—"} />
+    <section className="card" style={{ paddingBottom: 4, gap: 0 }} aria-label="판정 근거">
+      <h2 className="sec-title" style={{ marginBottom: 12 }}>왜 이렇게 봤나요</h2>
+
+      <Group k="trend" name="추세" value={bd.trend}>
+        <Row tone={trendTone} k="MA 배열" v={i ? maArrangeText(i) : "—"} />
+        <Row
+          tone={vsMa20 == null ? "neu" : vsMa20 >= 5 ? "up" : vsMa20 <= -5 ? "down" : "neu"}
+          k="종가 vs MA20"
+          v={formatPct(vsMa20)}
+        />
+      </Group>
+
+      <Group k="momentum" name="모멘텀" value={bd.momentum}>
+        <Row tone={rsiTone(i?.rsi14 ?? null)} k="RSI(14)" v={formatNum(i?.rsi14 ?? null, 1)} />
+        <Row tone={macdTone(i ?? ({} as Indicators))} k="MACD" v={i ? macdText(i) : "—"} />
+        {bd.rs20 != null && (
           <Row
-            tone={vsMa20 == null ? "neu" : vsMa20 >= 5 ? "up" : vsMa20 <= -5 ? "down" : "neu"}
-            k="종가 vs MA20"
-            v={formatPct(vsMa20)}
+            tone={bd.rs20 >= 0.5 ? "up" : bd.rs20 <= -0.5 ? "down" : "neu"}
+            k="지수 대비 상대강도(20일)"
+            v={formatPct(bd.rs20, 1)}
           />
-        </Group>
+        )}
+      </Group>
 
-        {/* 모멘텀 */}
-        <Group name="모멘텀" weight={20} value={bd.momentum}>
-          <Row tone={rsiTone(i?.rsi14 ?? null)} k="RSI(14)" v={formatNum(i?.rsi14 ?? null, 1)} />
-          <Row tone={macdTone(i ?? ({} as Indicators))} k="MACD" v={i ? macdText(i) : "—"} />
-          {bd.rs20 != null && (
-            <Row
-              tone={bd.rs20 >= 0.5 ? "up" : bd.rs20 <= -0.5 ? "down" : "neu"}
-              k="지수 대비 상대강도(20일)"
-              v={formatPct(bd.rs20, 1)}
-            />
-          )}
-        </Group>
+      <Group k="band" name="밴드 위치" value={bd.band}>
+        <Row tone={pctBTone(i?.bbPercentB ?? null)} k="볼린저 %B" v={formatNum(i?.bbPercentB ?? null)} />
+        <Row tone="neu" k="밴드폭" v={formatNum(i?.bbWidth ?? null, 3)} />
+        <Row
+          tone={close != null && i?.envUpper && close > i.envUpper ? "down" : "neu"}
+          k="엔벨로프"
+          v={close != null && i?.envUpper && close > i.envUpper ? "상단 이탈(과열)" : "밴드 내"}
+        />
+      </Group>
 
-        {/* 밴드 위치 */}
-        <Group name="밴드 위치" weight={20} value={bd.band}>
-          <Row tone={pctBTone(i?.bbPercentB ?? null)} k="볼린저 %B" v={formatNum(i?.bbPercentB ?? null)} />
-          <Row tone="neu" k="밴드폭" v={formatNum(i?.bbWidth ?? null, 3)} />
-          <Row
-            tone={close != null && i?.envUpper && close > i.envUpper ? "down" : "neu"}
-            k="엔벨로프"
-            v={close != null && i?.envUpper && close > i.envUpper ? "상단 이탈(과열)" : "밴드 내"}
-          />
-        </Group>
-
-        {/* 거래량 */}
-        <Group name="거래량" weight={20} value={bd.volume}>
-          <Row
-            tone={i?.volRatio20 != null && i.volRatio20 >= 1.5 ? "up" : "neu"}
-            k="20일 평균 대비"
-            v={i?.volRatio20 != null ? `${formatNum(i.volRatio20, 1)}배` : "—"}
-          />
-          <Row tone="neu" k="OBV" v={i?.obv != null ? i.obv.toLocaleString() : "—"} />
-        </Group>
-      </div>
-
-      {/* 매크로 — 점수에 방향을 더하지 않고 확신도만 조절합니다 */}
-      <div className="plate plate--muted section-label">시장 환경 · 참고 · 점수 방향에는 반영 안 함</div>
-      <div className="card">
-        <div className="card__hd">
-          <span className="card__t">시장 환경</span>
-          {bd.damp != null && bd.damp < 1 && (
-            <span className="card__v neu">확신도 {Math.round(bd.damp * 100)}%</span>
-          )}
-        </div>
-        <div className="card__plain">
-          {bd.damp != null && bd.damp < 1
-            ? `시장이 평소보다 불안정해 판정을 중립 쪽으로 ${Math.round((1 - bd.damp) * 100)}% 당겼어요. 방향 자체는 바꾸지 않습니다.`
-            : "시장이 비교적 안정적이라 판정을 그대로 씁니다."}
-        </div>
-        <Row tone={vixTone(macro?.vix ?? null)} k="VIX (공포지수)" v={formatNum(macro?.vix ?? null, 1)} />
-        <Row tone="neu" k="VKOSPI" v={formatNum(macro?.vkospi ?? null, 1)} />
-        <Row tone="neu" k="미 국채 10년물" v={macro?.us10y != null ? `${formatNum(macro.us10y)}%` : "—"} />
-        <Row tone="neu" k="USD/KRW" v={macro?.usdkrw != null ? macro.usdkrw.toLocaleString() : "—"} />
-      </div>
-    </div>
+      <Group k="volume" name="거래량" value={bd.volume}>
+        <Row
+          tone={i?.volRatio20 != null && i.volRatio20 >= 1.5 ? "up" : "neu"}
+          k="20일 평균 대비"
+          v={i?.volRatio20 != null ? `${formatNum(i.volRatio20, 1)}배` : "—"}
+        />
+        <Row tone="neu" k="OBV" v={i?.obv != null ? i.obv.toLocaleString() : "—"} />
+      </Group>
+    </section>
   );
 }
 
 function Group({
+  k,
   name,
-  weight,
   value,
   children,
 }: {
+  k: string;
   name: string;
-  weight: number;
   value: number;
   children: React.ReactNode;
 }) {
-  const key = { 추세: "trend", 모멘텀: "momentum", "밴드 위치": "band", 거래량: "volume" }[name] ?? "band";
   const st = scoreTag(value);
   return (
-    <div className="card">
-      <div className="card__hd">
-        <span className="card__t">
-          {name} · 가중 {weight}%
+    <details className="why">
+      <summary>
+        <span className="why__hd">
+          <span className="why__name">{name}</span>
+          <span className="why__w">비중 {GROUP_WEIGHT[k]}%</span>
+          <span className={`why__v num ${st.cls}`}>{st.text}</span>
+          <span className="why__chev"><Icon name="chev" size={18} /></span>
         </span>
-        <span className={`card__v ${st.cls}`}>{st.text}</span>
-      </div>
-      <div className="card__plain">{groupPlain(key, value)}</div>
-      {children}
-      <div className="bar">
-        <div className="bar__f" style={{ width: barWidth(key, value) }} />
-      </div>
-    </div>
+        <span className="why__plain">{groupPlain(k, value)}</span>
+        <span className="why__bar" aria-hidden>
+          <span className={`why__fill ${st.cls}`} style={{ display: "block", width: barWidth(k, value) }} />
+        </span>
+      </summary>
+      <div className="why__rows">{children}</div>
+    </details>
   );
 }
 
 function Row({ tone, k, v }: { tone: Tone; k: string; v: string }) {
   return (
     <div className="row">
-      <span className={pip(tone)} />
       <Term label={k} />
-      <span className={`row__v ${tone === "neu" ? "" : tone}`}>{v}</span>
+      <span className={`row__v num ${tone === "neu" ? "" : tone}`}>{v}</span>
     </div>
   );
 }

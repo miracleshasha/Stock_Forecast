@@ -6,7 +6,7 @@
 // ============================================================
 
 import { useEffect, useState } from "react";
-import { changeTone, formatChange, formatPrice } from "@/lib/format";
+import { changeTone, formatChange, formatDateKo, formatPrice } from "@/lib/format";
 import type { Currency, PriceInfo, QuoteResponse } from "@/lib/types";
 
 const REFRESH_MS = 60_000;
@@ -60,8 +60,8 @@ export default function LiveQuote({
 
   return (
     <div className="px">
-      <span className={`px__now ${tone}`}>{formatPrice(price, currency)}</span>
-      <span className={`px__chg ${tone}`}>
+      <span className="px__now num">{formatPrice(price, currency)}</span>
+      <span className={`px__chg num ${tone}`}>
         {formatChange(change, changePct, currency)}
       </span>
       {live ? (
@@ -70,10 +70,13 @@ export default function LiveQuote({
           {new Date(live.fetchedAt).toLocaleTimeString("ko-KR", {
             hour: "2-digit",
             minute: "2-digit",
-          })}
+          })}{" "}
+          기준
         </span>
       ) : (
-        fallback?.asOf && <span className="px__asof">{fallback.asOf} 종가</span>
+        fallback?.asOf && (
+          <span className="px__asof">{formatDateKo(fallback.asOf)} 종가 · 장중엔 실시간으로 바뀌어요</span>
+        )
       )}
     </div>
   );

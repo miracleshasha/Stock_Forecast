@@ -3,7 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { SearchResult } from "@/lib/types";
-import { changeTone, formatPct } from "@/lib/format";
+import { MARKET_LABEL, changeTone, formatPct } from "@/lib/format";
+import Icon from "./Icon";
 import { useNavProgress } from "./NavProgress";
 
 const SUGGESTIONS = ["삼성전자", "SK하이닉스", "NVDA", "AAPL", "에코프로비엠"];
@@ -48,6 +49,16 @@ export default function SearchBox({ autoFocus = false }: { autoFocus?: boolean }
     return () => clearTimeout(id);
   }, [q, composing]);
 
+  // 하단 탭 "검색"(/#search)으로 들어오면 입력창에 포커스
+  useEffect(() => {
+    const focusIfHash = () => {
+      if (window.location.hash === "#search") inputRef.current?.focus();
+    };
+    focusIfHash();
+    window.addEventListener("hashchange", focusIfHash);
+    return () => window.removeEventListener("hashchange", focusIfHash);
+  }, []);
+
   useEffect(() => {
     function onClick(e: MouseEvent) {
       if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
@@ -84,18 +95,16 @@ export default function SearchBox({ autoFocus = false }: { autoFocus?: boolean }
   }
 
   return (
-    <div className="searchbox" ref={boxRef}>
-      <div className={`search${open && results.length ? " search--focus" : ""}`}>
+    <div className="searchbox" id="search" ref={boxRef}>
+      <label className={`search${open && results.length ? " search--focus" : ""}`}>
         {loading || navigating ? (
           <span className="spinner" aria-label="불러오는 중" />
         ) : (
-          <svg className="icon-search" viewBox="0 0 24 24">
-            <circle cx="11" cy="11" r="7" />
-            <path d="M16.5 16.5 21 21" />
-          </svg>
+          <Icon name="search" size={22} />
         )}
         <input
           ref={inputRef}
+          type="search"
           autoFocus={autoFocus}
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -109,11 +118,12 @@ export default function SearchBox({ autoFocus = false }: { autoFocus?: boolean }
           placeholder="종목명, 티커, 종목코드로 검색"
           aria-label="종목 검색"
           spellCheck={false}
+          enterKeyHint="search"
         />
-      </div>
+      </label>
 
       {open && q.trim().length >= 2 && (
-        <div className="drop" role="listbox">
+        <div className="drop" role="listbox" aria-label="검색 결과">
           {loading && (
             <div className="drop__row drop__hint">
               <span className="spinner" style={{ marginRight: 8 }} /> 검색 중…
@@ -128,11 +138,16 @@ export default function SearchBox({ autoFocus = false }: { autoFocus?: boolean }
               onMouseEnter={() => setActive(i)}
               onClick={() => go(r.ticker)}
             >
-              <span className="badge">{r.market}</span>
-              <span className="drop__name">{r.name}</span>
-              <span className="drop__tick">{r.ticker}</span>
-              <span className={`drop__px ${changeTone(r.changePct)}`}>
-                {r.price != null ? r.price.toLocaleString() : "—"}
+              <span style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+                <span className="drop__name">{r.name}</span>
+                <span className="drop__tick">
+                  {r.ticker} · {MARKET_LABEL[r.market] ?? r.market}
+                </span>
+              </span>
+              <span className={`drop__px num ${changeTone(r.changePct)}`}>
+                <span style={{ color: "var(--ink)" }}>
+                  {r.price != null ? r.price.toLocaleString() : "—"}
+                </span>
                 <br />
                 <small>{formatPct(r.changePct)}</small>
               </span>
@@ -140,19 +155,16 @@ export default function SearchBox({ autoFocus = false }: { autoFocus?: boolean }
           ))}
           {!loading && results.length === 0 && (
             <div className="drop__empty">
-              현재 지원하지 않는 종목입니다. 소규모 유니버스로 시작해 확장 예정입니다.
+              아직 지원하지 않는 종목이에요. 지원 종목은 계속 늘려갈게요.
             </div>
-          )}
-          {results.length > 0 && (
-            <div className="drop__row drop__hint">↑↓ 이동 · Enter 선택 · Esc 닫기</div>
           )}
         </div>
       )}
 
       {!q && (
-        <div className="suggest-chips">
+        <div className="chips">
           {SUGGESTIONS.map((s) => (
-            <button key={s} className="chip" onClick={() => setQ(s)}>
+            <button key={s} type="button" className="chip" onClick={() => setQ(s)}>
               {s}
             </button>
           ))}

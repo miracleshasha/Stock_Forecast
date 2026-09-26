@@ -4,7 +4,7 @@ import type { ChartRange } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-const VALID: ChartRange[] = ["3M", "6M", "1Y", "3Y"];
+const VALID: ChartRange[] = ["1M", "3M", "6M", "1Y", "3Y"];
 
 export async function GET(
   req: Request,
@@ -12,8 +12,8 @@ export async function GET(
 ) {
   const { ticker } = await ctx.params;
   const { searchParams } = new URL(req.url);
-  const raw = (searchParams.get("range") ?? "6M") as ChartRange;
-  const range = VALID.includes(raw) ? raw : "6M";
+  const raw = (searchParams.get("range") ?? "3M") as ChartRange;
+  const range = VALID.includes(raw) ? raw : "3M";
   const series = await getChart(ticker, range);
   return NextResponse.json(series);
 }

@@ -144,7 +144,7 @@ export interface ChartSeries {
   volMa20: { time: string; value: number }[];
 }
 
-export type ChartRange = "3M" | "6M" | "1Y" | "3Y";
+export type ChartRange = "1M" | "3M" | "6M" | "1Y" | "3Y";
 
 export interface FavoriteItem {
   ticker: string;

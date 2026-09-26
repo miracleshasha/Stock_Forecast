@@ -15,18 +15,14 @@ export default function StockHeader({
     <div>
       <div className="sym">
         <div>
-          <div className="sym__name">{name}</div>
-          <div className="sym__tick">
-            {symbol.ticker} · {MARKET_LABEL[symbol.market]} · {symbol.currency}
+          <h1 className="sym__name">{name}</h1>
+          <div className="sym__meta">
+            {symbol.ticker} · {MARKET_LABEL[symbol.market] ?? symbol.market}
           </div>
         </div>
         <FavoriteStar ticker={symbol.ticker} market={symbol.market} />
       </div>
-      <LiveQuote
-        ticker={symbol.ticker}
-        currency={symbol.currency}
-        fallback={price}
-      />
+      <LiveQuote ticker={symbol.ticker} currency={symbol.currency} fallback={price} />
     </div>
   );
 }

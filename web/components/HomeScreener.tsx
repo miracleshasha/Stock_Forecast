@@ -1,59 +1,66 @@
-import Link from "next/link";
-import type { TopRow } from "@/lib/db";
-import { MiniGauge } from "./SignalGauge";
-import { ZONE_LABEL, changeTone, formatPct, formatPrice, zoneTone } from "@/lib/format";
+"use client";
 
-export default function HomeScreener({
-  buys,
-  sells,
-}: {
-  buys: TopRow[];
-  sells: TopRow[];
-}) {
-  if (buys.length === 0 && sells.length === 0) return null;
+import { useState } from "react";
+import type { Region, TopRow, TopSignals } from "@/lib/db";
+import StockRow from "./StockRow";
+
+const TABS: { key: Region; label: string }[] = [
+  { key: "ALL", label: "전체" },
+  { key: "KR", label: "국내" },
+  { key: "US", label: "해외" },
+];
+
+export default function HomeScreener({ top }: { top: TopSignals }) {
   return (
-    <div className="screener">
-      <ScreenerCol title="오늘 매수 신호 TOP" rows={buys} accent="up" />
-      <ScreenerCol title="오늘 매도 신호 TOP" rows={sells} accent="down" />
-    </div>
+    <>
+      <Section
+        title="상승 흐름이 강한 종목"
+        desc="기술 지표 점수가 높은 순서예요"
+        pick={(r) => top[r].buys}
+      />
+      <Section
+        title="하락 흐름이 강한 종목"
+        desc="기술 지표 점수가 낮은 순서예요"
+        pick={(r) => top[r].sells}
+      />
+    </>
   );
 }
 
-function ScreenerCol({
+function Section({
   title,
-  rows,
-  accent,
+  desc,
+  pick,
 }: {
   title: string;
-  rows: TopRow[];
-  accent: "up" | "down";
+  desc: string;
+  pick: (r: Region) => TopRow[];
 }) {
+  const [region, setRegion] = useState<Region>("ALL");
+  const rows = pick(region);
   return (
-    <div className="screener__col">
-      <div className={`screener__hd ${accent}`}>{title}</div>
-      {rows.map((r, i) => {
-        const tone = zoneTone(r.zone);
-        return (
-          <Link href={`/stock/${r.ticker}`} className="screener__row" key={r.ticker}>
-            <span className="screener__rank">{i + 1}</span>
-            <span className="screener__name">
-              <b>{r.name}</b>
-              <small>{r.market}</small>
-            </span>
-            <span className="screener__gauge">
-              <MiniGauge score={r.score} />
-              <span className={`screener__zone ${tone}`}>
-                {ZONE_LABEL[r.zone]} {r.score > 0 ? `+${r.score}` : r.score}
-              </span>
-            </span>
-            <span className={`screener__px ${changeTone(r.changePct)}`}>
-              {formatPrice(r.price, r.currency)}
-              <br />
-              <small>{formatPct(r.changePct)}</small>
-            </span>
-          </Link>
-        );
-      })}
-    </div>
+    <section className="card card--list" aria-label={title}>
+      <h2 className="sec-title">{title}</h2>
+      <p className="sec-desc">{desc}</p>
+      <div className="chips" role="tablist" aria-label="시장" style={{ margin: "10px 0 4px" }}>
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            role="tab"
+            aria-selected={region === t.key}
+            className={`chip chip--soft${region === t.key ? " chip--on" : ""}`}
+            onClick={() => setRegion(t.key)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      {rows.length === 0 ? (
+        <p className="li-empty">해당하는 종목이 없어요</p>
+      ) : (
+        rows.map((r, i) => <StockRow key={r.ticker} row={r} rank={i + 1} />)
+      )}
+    </section>
   );
 }

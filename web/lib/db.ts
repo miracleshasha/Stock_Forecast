@@ -224,7 +224,7 @@ export async function getMacro(): Promise<Macro | null> {
 }
 
 // ---------- 차트 (S-04) ----------
-const RANGE_DAYS: Record<ChartRange, number> = { "3M": 92, "6M": 183, "1Y": 366, "3Y": 1096 };
+const RANGE_DAYS: Record<ChartRange, number> = { "1M": 31, "3M": 92, "6M": 183, "1Y": 366, "3Y": 1096 };
 
 export async function getChart(
   ticker: string,
@@ -351,44 +351,131 @@ export interface TopRow {
   changePct: number | null;
 }
 
-export async function getTopSignals(
-  limit = 5,
-): Promise<{ buys: TopRow[]; sells: TopRow[] }> {
+export type Region = "ALL" | "KR" | "US";
+export type TopSignals = Record<Region, { buys: TopRow[]; sells: TopRow[] }>;
+
+const KR_MARKETS = new Set(["KOSPI", "KOSDAQ"]);
+const regionOf = (market: string): "KR" | "US" => (KR_MARKETS.has(market) ? "KR" : "US");
+
+/** 홈 목록: 전체/국내/해외 각각 상·하위 limit개.
+ *  v_latest_signal 에는 시장 정보가 없어 전 종목(~670행, 1000행 캡 이내)을
+ *  한 번 읽고 symbols 와 합쳐 나눕니다. */
+export async function getTopSignals(limit = 5): Promise<TopSignals> {
+  const empty = { buys: [], sells: [] };
+  const out: TopSignals = { ALL: empty, KR: empty, US: empty };
   const sb = getSupabase();
-  if (!sb) return { buys: [], sells: [] };
+  if (!sb) return out;
 
-  const [buyRes, sellRes] = await Promise.all([
-    sb.from("v_latest_signal").select("ticker, score, zone").order("score", { ascending: false }).limit(limit),
-    sb.from("v_latest_signal").select("ticker, score, zone").order("score", { ascending: true }).limit(limit),
-  ]);
-  const buys = buyRes.data ?? [];
-  const sells = sellRes.data ?? [];
-  const tickers = [...buys, ...sells].map((r) => r.ticker as string);
-  if (tickers.length === 0) return { buys: [], sells: [] };
-
-  const [symRes, quotes] = await Promise.all([
-    sb.from("symbols").select("ticker, market, name_ko, name_en, currency").in("ticker", tickers),
-    getLatestQuotes(tickers),
+  const [sigRes, symRes] = await Promise.all([
+    sb.from("v_latest_signal").select("ticker, score, zone").limit(5000),
+    sb.from("symbols").select("ticker, market, name_ko, name_en, currency").eq("is_active", true).limit(5000),
   ]);
   const symMap = new Map((symRes.data ?? []).map((r) => [r.ticker as string, r]));
+  const sigs = (sigRes.data ?? [])
+    .filter((r) => symMap.has(r.ticker as string) && r.zone !== "UNAVAILABLE")
+    .map((r) => ({ ticker: r.ticker as string, score: Number(r.score), zone: r.zone as Zone }));
 
-  const build = (rows: { ticker: string; score: number; zone: string }[]): TopRow[] =>
+  const pick = (region: Region) => {
+    const pool = region === "ALL"
+      ? sigs
+      : sigs.filter((r) => regionOf(symMap.get(r.ticker)!.market as string) === region);
+    const desc = [...pool].sort((a, b) => b.score - a.score);
+    return {
+      buys: desc.slice(0, limit).filter((r) => r.score > 0),
+      sells: desc.slice(-limit).reverse().filter((r) => r.score < 0),
+    };
+  };
+  const picked = { ALL: pick("ALL"), KR: pick("KR"), US: pick("US") };
+
+  const tickers = [...new Set(
+    Object.values(picked).flatMap((p) => [...p.buys, ...p.sells].map((r) => r.ticker)),
+  )];
+  const quotes = await getLatestQuotes(tickers);
+
+  const build = (rows: { ticker: string; score: number; zone: Zone }[]): TopRow[] =>
     rows.map((r) => {
-      const s = symMap.get(r.ticker);
+      const s = symMap.get(r.ticker)!;
       const qt = quotes.get(r.ticker);
       return {
         ticker: r.ticker,
-        name: s ? displayName(s) : r.ticker,
-        market: (s?.market as Market) ?? "KOSPI",
-        currency: ((s?.currency as "KRW" | "USD") ?? "KRW"),
-        score: Number(r.score),
-        zone: r.zone as Zone,
+        name: displayName(s),
+        market: s.market as Market,
+        currency: (s.currency as "KRW" | "USD") ?? "KRW",
+        score: r.score,
+        zone: r.zone,
         price: qt?.close ?? null,
         changePct: qt?.changePct ?? null,
       };
     });
 
-  return { buys: build(buys as never), sells: build(sells as never) };
+  for (const k of ["ALL", "KR", "US"] as Region[]) {
+    out[k] = { buys: build(picked[k].buys), sells: build(picked[k].sells) };
+  }
+  return out;
+}
+
+// ---------- 종목 상세: 참고 정보 ----------
+export interface StockExtras {
+  high52: number | null;
+  low52: number | null;
+  /** 12-1개월 수익률(%) — 최근 1개월을 뺀 1년 수익률 */
+  mom12: number | null;
+  /** 같은 시장(국내/해외) 안에서의 백분위(0~1, 1이 가장 강함) */
+  mom12Rank: number | null;
+  peers: number;
+  region: "KR" | "US";
+}
+
+/** 52주 범위와 12개월 흐름 순위. 판정 점수에는 들어가지 않는 참고 정보입니다.
+ *  (factor_test.py 에서 12-1 모멘텀이 유일하게 앞/뒤 기간 모두 양의 IC를 보임) */
+export async function getStockExtras(ticker: string, market: Market): Promise<StockExtras> {
+  const region = regionOf(market);
+  const out: StockExtras = { high52: null, low52: null, mom12: null, mom12Rank: null, peers: 0, region };
+  const sb = getSupabase();
+  if (!sb) return out;
+
+  const { data: rows } = await sb
+    .from("daily_prices")
+    .select("trade_date, high, low, close")
+    .eq("ticker", ticker)
+    .order("trade_date", { ascending: false })
+    .limit(253);
+  if (!rows || rows.length === 0) return out;
+
+  const year = rows.slice(0, 252);
+  out.high52 = Math.max(...year.map((r) => Number(r.high)));
+  out.low52 = Math.min(...year.map((r) => Number(r.low)));
+  if (rows.length < 253) return out;
+
+  const dRecent = rows[21].trade_date as string;
+  const dOld = rows[252].trade_date as string;
+  out.mom12 = (Number(rows[21].close) / Number(rows[252].close) - 1) * 100;
+
+  // 같은 두 날짜의 전 종목 종가 → 같은 시장 안 순위
+  const [recentRes, oldRes, symRes] = await Promise.all([
+    sb.from("daily_prices").select("ticker, close").eq("trade_date", dRecent).limit(5000),
+    sb.from("daily_prices").select("ticker, close").eq("trade_date", dOld).limit(5000),
+    sb.from("symbols").select("ticker, market").eq("is_active", true).limit(5000),
+  ]);
+  const inRegion = new Set(
+    (symRes.data ?? []).filter((r) => regionOf(r.market as string) === region).map((r) => r.ticker as string),
+  );
+  const old = new Map((oldRes.data ?? []).map((r) => [r.ticker as string, Number(r.close)]));
+  const rets: number[] = [];
+  for (const r of recentRes.data ?? []) {
+    const t = r.ticker as string;
+    const o = old.get(t);
+    if (!inRegion.has(t) || !o) continue;
+    rets.push(Number(r.close) / o - 1);
+  }
+  if (rets.length >= 10) {
+    const mine = out.mom12 / 100;
+    const below = rets.filter((v) => v < mine).length;
+    const equal = rets.filter((v) => v === mine).length;
+    out.mom12Rank = (below + equal / 2) / rets.length;
+    out.peers = rets.length;
+  }
+  return out;
 }
 
 async function latestSignals(

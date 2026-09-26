@@ -1,17 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { MiniGauge } from "@/components/SignalGauge";
+import Icon from "@/components/Icon";
+import StockRow from "@/components/StockRow";
 import { useNavProgress } from "@/components/NavProgress";
-import {
-  ZONE_LABEL,
-  changeTone,
-  formatPct,
-  formatPrice,
-  zoneTone,
-} from "@/lib/format";
+import { zoneTone } from "@/lib/format";
 import {
   FAVORITES_EVENT,
   FAVORITES_MAX,
@@ -22,18 +16,13 @@ import type { FavoriteRow } from "@/lib/db";
 
 type Sort = "signal" | "change" | "name";
 const SORTS: { key: Sort; label: string }[] = [
-  { key: "signal", label: "시그널순" },
+  { key: "signal", label: "점수순" },
   { key: "change", label: "등락순" },
   { key: "name", label: "이름순" },
 ];
 
 export default function FavoritesPage() {
-  const router = useRouter();
   const { start } = useNavProgress();
-  const goStock = (ticker: string) => {
-    start();
-    router.push(`/stock/${ticker}`);
-  };
   const [tickers, setTickers] = useState<string[]>([]);
   const [rows, setRows] = useState<FavoriteRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,24 +72,49 @@ export default function FavoritesPage() {
   }, [rows]);
 
   return (
-    <main className="shell shell--narrow">
-      <div className="list-head">
-        <span className="list-head__t">즐겨찾기</span>
-        <span className="plate plate--muted">
+    <main className="shell">
+      <div className="page-hd">
+        <h1 className="page-hd__t">즐겨찾기</h1>
+        <span className="page-hd__n num">
           {tickers.length} / {FAVORITES_MAX}
         </span>
       </div>
 
-      {/* 시그널 분포 요약 */}
-      {rows.length > 0 && (
-        <div className="fav-summary">
-          <span className="fav-summary__pill up">매수 {dist.buy}</span>
-          <span className="fav-summary__pill neu">중립 {dist.neu}</span>
-          <span className="fav-summary__pill down">매도 {dist.sell}</span>
-          <div className="seg">
+      {loading && tickers.length > 0 && (
+        <section className="card" style={{ gap: 14 }} aria-busy="true">
+          <div className="skel" style={{ width: "60%" }} />
+          <div className="skel" style={{ width: "80%", height: 26 }} />
+          <div className="skel" style={{ width: "100%", height: 38 }} />
+        </section>
+      )}
+
+      {!loading && tickers.length === 0 && (
+        <div className="state">
+          <span className="state__ic"><Icon name="star" size={36} /></span>
+          <div className="state__t">아직 즐겨찾기가 없어요</div>
+          <div className="state__d">
+            관심 종목을 검색하고 별표를 누르면 여기에 모여요.
+          </div>
+          <Link href="/#search" className="btn">
+            종목 검색하기
+          </Link>
+        </div>
+      )}
+
+      {!loading && rows.length > 0 && (
+        <section className="card card--list" aria-label="즐겨찾기 목록">
+          <div className="dist">
+            <span className="score up">상승 {dist.buy}</span>
+            <span className="score">중립 {dist.neu}</span>
+            <span className="score down">하락 {dist.sell}</span>
+          </div>
+          <div className="seg" role="tablist" aria-label="정렬" style={{ margin: "12px 0 4px" }}>
             {SORTS.map((s) => (
               <button
                 key={s.key}
+                type="button"
+                role="tab"
+                aria-selected={sort === s.key}
                 className={`seg__btn${sort === s.key ? " seg__btn--on" : ""}`}
                 onClick={() => setSort(s.key)}
               >
@@ -108,87 +122,28 @@ export default function FavoritesPage() {
               </button>
             ))}
           </div>
-        </div>
-      )}
-
-      {loading && tickers.length > 0 && (
-        <div className="state">
-          <div className="skel" style={{ width: "60%" }} />
-          <div className="skel" style={{ width: "80%", height: 26 }} />
-          <div className="skel" style={{ width: "100%", height: 38 }} />
-        </div>
-      )}
-
-      {!loading && tickers.length === 0 && (
-        <div className="state">
-          <div className="state__ic">☆</div>
-          <div className="state__t">아직 즐겨찾기가 없습니다</div>
-          <div className="state__d">
-            관심 종목을 검색하고 별표를 누르면 여기에 모입니다. 목록에서 종목을 누르면
-            바로 상세 판정으로 이동합니다.
-          </div>
-          <Link href="/" className="state__btn">
-            종목 검색하기
-          </Link>
-        </div>
-      )}
-
-      {!loading &&
-        sorted.map((r) => {
-          const tone = r.zone ? zoneTone(r.zone) : "neu";
-          return (
-            <div
-              className={`fav fav--${tone}`}
-              key={r.ticker}
-              role="link"
-              tabIndex={0}
-              onClick={() => goStock(r.ticker)}
-              onKeyDown={(e) => e.key === "Enter" && goStock(r.ticker)}
-            >
-              <div style={{ minWidth: 0 }}>
-                <div className="fav__nm">{r.name}</div>
-                <div className="fav__tk">
-                  {r.ticker} · {r.market}
-                </div>
-              </div>
-              <div className="fav__gauge">
-                {r.score != null ? (
-                  <>
-                    <MiniGauge score={r.score} />
-                    <div className={`fav__zone ${tone}`}>
-                      {r.zone ? ZONE_LABEL[r.zone] : ""}{" "}
-                      {r.score > 0 ? `+${r.score}` : r.score}
-                    </div>
-                  </>
-                ) : (
-                  <div className="fav__zone neu">판정 없음</div>
-                )}
-              </div>
-              <div className={`fav__px ${changeTone(r.changePct)}`}>
-                {formatPrice(r.price, r.currency)}
-                <br />
-                <small>{formatPct(r.changePct)}</small>
-              </div>
+          {sorted.map((r) => (
+            <div className="li-wrap" key={r.ticker}>
+              <StockRow row={r} onNavigate={start} />
               <button
-                className="fav__rm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removeFavorite(r.ticker);
-                }}
+                type="button"
+                className="iconbtn"
+                style={{ color: "var(--faint)" }}
+                onClick={() => removeFavorite(r.ticker)}
                 aria-label={`${r.name} 즐겨찾기 삭제`}
                 title="삭제"
               >
-                ✕
+                <Icon name="close" size={18} />
               </button>
             </div>
-          );
-        })}
+          ))}
+        </section>
+      )}
 
       {tickers.length > 0 && (
-        <div className="note-box">
-          현재 즐겨찾기는 이 브라우저에만 저장됩니다. 로그인하면 기기 간 동기화됩니다.{" "}
-          <span>(2차 예정)</span>
-        </div>
+        <p className="caption" style={{ textAlign: "center" }}>
+          즐겨찾기는 이 브라우저에만 저장돼요.
+        </p>
       )}
     </main>
   );

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { Market } from "@/lib/types";
 import { FAVORITES_EVENT, isFavorite, toggleFavorite } from "@/lib/favorites";
+import Icon from "./Icon";
 
 export default function FavoriteStar({
   ticker,
@@ -22,13 +23,14 @@ export default function FavoriteStar({
 
   return (
     <button
-      className={`star${on ? " star--on" : ""}`}
+      type="button"
+      className={`iconbtn star${on ? " star--on" : ""}`}
       onClick={() => setOn(toggleFavorite(ticker, market))}
       aria-pressed={on}
       aria-label={on ? "즐겨찾기 해제" : "즐겨찾기 추가"}
       title={on ? "즐겨찾기 해제" : "즐겨찾기 추가"}
     >
-      {on ? "★" : "☆"}
+      <Icon name="star" filled={on} size={26} />
     </button>
   );
 }
