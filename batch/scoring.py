@@ -32,6 +32,13 @@ WEIGHTS = {"trend": 40, "momentum": 20, "band": 20, "volume": 20}
 STRESS_DAMP = [(16, 1.0), (20, 0.85), (25, 0.70), (999, 0.50)]
 
 
+def _ro(n: float) -> str:
+    """정수로 반올림해 읽은 숫자 뒤 조사 '로/으로'. 끝자리 읽기(십·백… / 삼 / 육)가
+    받침이면 '으로'. 1(일)은 ㄹ 받침이라 '로'입니다."""
+    last = f"{n:.0f}"[-1:]
+    return "으로" if last in ("0", "3", "6") else "로"
+
+
 def group_avg(items: list[dict]) -> float:
     """그룹 점수(-2~+2). 항목별 가중치 w(기본 1.0)를 반영한 가중평균.
 
@@ -68,9 +75,9 @@ def _trend(latest, close) -> list[dict]:
     if None not in (ma20, ma60, ma120):
         cmp1, cmp2 = ma20 > ma60, ma60 > ma120
         if cmp1 and cmp2:
-            out.append({"key": "MA 정배열", "score": 2, "phrase": "20·60·120일선이 정배열입니다"})
+            out.append({"key": "MA 정배열", "score": 2, "phrase": "20·60·120일선이 정배열이에요"})
         elif not cmp1 and not cmp2:
-            out.append({"key": "MA 역배열", "score": -2, "phrase": "이동평균선이 역배열입니다"})
+            out.append({"key": "MA 역배열", "score": -2, "phrase": "이동평균선이 역배열이에요"})
         else:
             out.append({"key": "MA 혼조", "score": 0, "phrase": None})
     # 종가 vs MA20
@@ -78,7 +85,7 @@ def _trend(latest, close) -> list[dict]:
         gap = (close - ma20) / ma20 * 100
         s = 2 if gap >= 5 else 1 if gap >= 2 else 0 if gap > -2 else -1 if gap > -5 else -2
         out.append({"key": f"MA20 {gap:+.1f}%", "score": s,
-                    "phrase": f"종가가 20일선 대비 {gap:+.1f}%에 있습니다" if abs(gap) >= 2 else None})
+                    "phrase": f"종가가 20일선 대비 {gap:+.1f}%에 있어요" if abs(gap) >= 2 else None})
 
     if not config.TREND_EXTRA:
         return out
@@ -92,11 +99,11 @@ def _trend(latest, close) -> list[dict]:
         up = pdi > mdi
         if adx >= 25:
             s = 2 if up else -2
-            ph = f"ADX {adx:.0f}로 {'상승' if up else '하락'}추세가 강합니다"
+            ph = f"ADX {adx:.0f}{_ro(adx)} {'상승' if up else '하락'}추세가 강해요"
         elif adx >= 20:
             s, ph = (1 if up else -1), None
         else:
-            s, ph = 0, "ADX가 낮아 뚜렷한 추세가 없습니다"
+            s, ph = 0, "ADX가 낮아 뚜렷한 추세가 없어요"
         out.append({"key": f"ADX {adx:.0f}", "score": s, "phrase": ph})
 
     # MA20 기울기 — 정배열이어도 이동평균선이 꺾이는 중인 경우(고점 직후)를 잡습니다.
@@ -104,7 +111,7 @@ def _trend(latest, close) -> list[dict]:
     if slope is not None:
         s = 2 if slope >= 2 else 1 if slope >= 0.5 else 0 if slope > -0.5 else -1 if slope > -2 else -2
         out.append({"key": f"MA20기울기 {slope:+.1f}%", "score": s,
-                    "phrase": f"20일선이 10거래일간 {slope:+.1f}% 움직였습니다" if abs(slope) >= 2 else None})
+                    "phrase": f"20일선이 10거래일간 {slope:+.1f}% 움직였어요" if abs(slope) >= 2 else None})
 
     # 52주 고가 대비 위치 — 추세추종에서 가장 견고한 단일 신호 중 하나.
     p52 = _num(latest.get("pct_from_52w_high"))
@@ -112,9 +119,9 @@ def _trend(latest, close) -> list[dict]:
         s = 2 if p52 >= -5 else 1 if p52 >= -15 else 0 if p52 >= -30 else -1 if p52 >= -50 else -2
         ph = None
         if p52 >= -5:
-            ph = "52주 고가 부근입니다"
+            ph = "52주 고가 부근이에요"
         elif p52 < -30:
-            ph = f"52주 고가 대비 {p52:.0f}% 낮은 지점입니다"
+            ph = f"52주 고가 대비 {p52:.0f}% 낮은 지점이에요"
         out.append({"key": f"52주고가 {p52:+.0f}%", "score": s, "phrase": ph})
 
     return out
@@ -135,11 +142,11 @@ def _momentum(latest, index_ret20=None, stock_ret20=None) -> list[dict]:
         else:
             s = -1
         if s > 0:
-            rsi_phrase = f"RSI가 {rsi:.0f}로 양호합니다"
+            rsi_phrase = f"RSI가 {rsi:.0f}{_ro(rsi)} 양호해요"
         elif rsi > 80:
-            rsi_phrase = f"RSI가 {rsi:.0f}로 과열입니다"
+            rsi_phrase = f"RSI가 {rsi:.0f}{_ro(rsi)} 과열이에요"
         elif rsi < 30:
-            rsi_phrase = f"RSI가 {rsi:.0f}로 침체입니다"
+            rsi_phrase = f"RSI가 {rsi:.0f}{_ro(rsi)} 침체예요"
         else:
             rsi_phrase = None
         out.append({"key": f"RSI {rsi:.0f}", "score": s, "phrase": rsi_phrase})
@@ -150,11 +157,11 @@ def _momentum(latest, index_ret20=None, stock_ret20=None) -> list[dict]:
     macd, sig, hist = _num(latest.get("macd")), _num(latest.get("macd_signal")), _num(latest.get("macd_hist"))
     if None not in (macd, sig, hist):
         if macd > sig and hist > 0:
-            out.append({"key": "MACD 골든", "score": 2, "phrase": "MACD가 골든크로스했습니다"})
+            out.append({"key": "MACD 골든", "score": 2, "phrase": "MACD가 골든크로스했어요"})
         elif macd > sig:
             out.append({"key": "MACD 골든", "score": 1, "phrase": None})
         elif macd < sig and hist < 0:
-            out.append({"key": "MACD 데드", "score": -2, "phrase": "MACD가 데드크로스했습니다"})
+            out.append({"key": "MACD 데드", "score": -2, "phrase": "MACD가 데드크로스했어요"})
         else:
             out.append({"key": "MACD 데드", "score": -1, "phrase": None})
     return out
@@ -175,7 +182,7 @@ def _band(latest, close, df) -> list[dict]:
         else:
             s = 0
         out.append({"key": f"%B {pb:.2f}", "score": s,
-                    "phrase": f"볼린저 %B가 {pb:.2f}입니다" if s != 0 else None})
+                    "phrase": f"볼린저 %B가 {pb:.2f} 수준이에요" if s != 0 else None})
     # 밴드폭 스퀴즈: 최근 120일 분위수
     width = _num(latest.get("bb_width"))
     if width is not None and len(df) >= 60:
@@ -183,7 +190,7 @@ def _band(latest, close, df) -> list[dict]:
         if len(recent) >= 20:
             pct = (recent < width).mean()  # 현재 폭의 백분위
             if pct <= 0.2 and close and _num(latest.get("bb_mid")) and close > latest["bb_mid"]:
-                out.append({"key": "스퀴즈 상단돌파", "score": 1, "phrase": "밴드 수축 후 상단을 돌파하고 있습니다"})
+                out.append({"key": "스퀴즈 상단돌파", "score": 1, "phrase": "밴드 수축 후 상단을 돌파하고 있어요"})
             elif pct <= 0.2 and close and _num(latest.get("bb_mid")) and close < latest["bb_mid"]:
                 out.append({"key": "스퀴즈 하단이탈", "score": -1, "phrase": None})
             else:
@@ -192,7 +199,7 @@ def _band(latest, close, df) -> list[dict]:
     env_u, env_l, mid = _num(latest.get("env_upper")), _num(latest.get("env_lower")), _num(latest.get("bb_mid"))
     if close and None not in (env_u, env_l, mid):
         if close > env_u:
-            out.append({"key": "엔벨로프 상단이탈", "score": -2, "phrase": "엔벨로프 상단을 이탈해 과열입니다"})
+            out.append({"key": "엔벨로프 상단이탈", "score": -2, "phrase": "엔벨로프 상단을 이탈해 과열이에요"})
         elif close > mid:
             out.append({"key": "엔벨로프 중심상단", "score": 2, "phrase": None})
         elif close < env_l:
@@ -207,9 +214,9 @@ def _volume(latest, up_day) -> list[dict]:
     vr = _num(latest.get("vol_ratio20"))
     if vr is not None:
         if vr >= 1.5 and up_day:
-            out.append({"key": f"거래량 {vr:.1f}배", "score": 2, "phrase": f"거래량이 20일 평균의 {vr:.1f}배로 늘었습니다"})
+            out.append({"key": f"거래량 {vr:.1f}배", "score": 2, "phrase": f"거래량이 20일 평균의 {vr:.1f}배로 늘었어요"})
         elif vr >= 1.5 and up_day is False:
-            out.append({"key": f"거래량 {vr:.1f}배", "score": -2, "phrase": f"하락하며 거래량이 {vr:.1f}배로 늘었습니다"})
+            out.append({"key": f"거래량 {vr:.1f}배", "score": -2, "phrase": f"하락하며 거래량이 {vr:.1f}배로 늘었어요"})
         elif vr >= 1.2 and up_day:
             out.append({"key": f"거래량 {vr:.1f}배", "score": 1, "phrase": None})
         elif vr >= 1.2 and up_day is False:
@@ -243,21 +250,21 @@ def macro_market_items(macro: dict, currency: str) -> list[dict]:
         fear, fname = vx, "VIX"
     if fear is not None:
         if fear < 15:
-            out.append({"key": f"{fname} {fear:.0f}", "score": 2, "phrase": f"{fname}가 {fear:.0f}로 낮아 시장이 안정적입니다"})
+            out.append({"key": f"{fname} {fear:.0f}", "score": 2, "phrase": f"{fname}가 {fear:.0f}{_ro(fear)} 낮아 시장이 안정적이에요"})
         elif fear <= 20:
             out.append({"key": f"{fname} {fear:.0f}", "score": 1, "phrase": None})
         elif fear <= 25:
             out.append({"key": f"{fname} {fear:.0f}", "score": -1, "phrase": None})
         else:
-            out.append({"key": f"{fname} {fear:.0f}", "score": -2, "phrase": f"{fname}가 {fear:.0f}로 높아 시장 부담이 있습니다"})
+            out.append({"key": f"{fname} {fear:.0f}", "score": -2, "phrase": f"{fname}가 {fear:.0f}{_ro(fear)} 높아 시장 부담이 있어요"})
 
     # 미 10년물 금리 추세 (하락 = 우호, 급등 = 부담)
     r_chg = _num(macro.get("_us10y_chg"))
     if r_chg is not None:
         if r_chg <= -0.10:
-            out.append({"key": f"미10년물 {r_chg:+.2f}%p", "score": 1, "phrase": "미 국채금리가 하락세입니다"})
+            out.append({"key": f"미10년물 {r_chg:+.2f}%p", "score": 1, "phrase": "미 국채금리가 하락세예요"})
         elif r_chg >= 0.15:
-            out.append({"key": f"미10년물 {r_chg:+.2f}%p", "score": -1, "phrase": "미 국채금리가 급등세입니다"})
+            out.append({"key": f"미10년물 {r_chg:+.2f}%p", "score": -1, "phrase": "미 국채금리가 급등세예요"})
         else:
             out.append({"key": f"미10년물 {r_chg:+.2f}%p", "score": 0, "phrase": None})
 
@@ -267,9 +274,9 @@ def macro_market_items(macro: dict, currency: str) -> list[dict]:
         if fx_chg is not None and usdkrw:
             pct = fx_chg / usdkrw * 100
             if pct <= -0.5:
-                out.append({"key": f"USD/KRW {pct:+.1f}%", "score": 1, "phrase": "원화가 강세입니다"})
+                out.append({"key": f"USD/KRW {pct:+.1f}%", "score": 1, "phrase": "원화가 강세예요"})
             elif pct >= 1.0:
-                out.append({"key": f"USD/KRW {pct:+.1f}%", "score": -1, "phrase": "환율이 급등세입니다"})
+                out.append({"key": f"USD/KRW {pct:+.1f}%", "score": -1, "phrase": "환율이 급등세예요"})
             else:
                 out.append({"key": f"USD/KRW {pct:+.1f}%", "score": 0, "phrase": None})
 
@@ -287,7 +294,7 @@ def _macro_rs(index_ret20, stock_ret20) -> list[dict]:
     rs = stock_ret20 - index_ret20
     s = 2 if rs >= 3 else 1 if rs >= 0.5 else 0 if rs > -0.5 else -1 if rs > -3 else -2
     return [{"key": f"RS {rs:+.1f}%p", "score": s,
-             "phrase": f"지수 대비 20일 상대강도가 {rs:+.1f}%p입니다" if abs(rs) >= 0.5 else None}]
+             "phrase": f"지수 대비 20일 상대강도가 {rs:+.1f}%p예요" if abs(rs) >= 0.5 else None}]
 
 
 def stress_damp(macro: dict, currency: str) -> float:
@@ -353,7 +360,7 @@ def _summary(score: int, items: list[dict]) -> str:
     if caveat:
         parts.append("다만 " + caveat[0]["phrase"])
     if not parts:
-        return "뚜렷한 방향성 신호가 약해 중립 구간으로 판단됩니다."
+        return "뚜렷한 방향 신호가 약해 중립으로 봤어요."
     return ". ".join(parts) + "."
 
 
