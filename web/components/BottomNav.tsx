@@ -9,6 +9,7 @@ type Item = { href: string; label: string; icon: IconName; match: (p: string) =>
 /** 모바일 하단 탭. 768px 이상에서는 CSS로 숨기고 상단 메뉴를 씁니다. */
 export default function BottomNav({ who }: { who: string | null }) {
   const path = usePathname();
+  if (path === "/login") return null; // 가입 전엔 갈 수 있는 곳이 없음
   const ITEMS: Item[] = [
     { href: "/", label: "홈", icon: "home", match: (p) => p === "/" },
     { href: "/#search", label: "검색", icon: "search", match: (p) => p.startsWith("/stock/") },

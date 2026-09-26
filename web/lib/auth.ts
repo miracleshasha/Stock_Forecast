@@ -22,7 +22,9 @@ export const COOKIE = {
   who: "sd_who",
 } as const;
 
-const REFRESH_MAX_AGE = 60 * 60 * 24 * 30; // 30일
+// 자동 로그인 유지 기간. 쓸 때마다(토큰 갱신 시) 다시 늘어납니다.
+// 400일은 브라우저가 허용하는 쿠키 최대 수명입니다.
+const REFRESH_MAX_AGE = 60 * 60 * 24 * 400;
 
 export const phoneToEmail = (phone: string) => `${normalizePhone(phone)}@${ID_DOMAIN}`;
 export const emailToPhone = (email: string | undefined) =>
@@ -122,6 +124,12 @@ export function writeSessionCookies(jar: CookieJar, session: Session) {
 
 export function clearSessionCookies(jar: CookieJar) {
   for (const name of Object.values(COOKIE)) jar.set(name, "", { ...base(), maxAge: 0 });
+}
+
+/** 로컬 검증을 못 하는 토큰(구형 HS256)용: Supabase 에 직접 확인 */
+export async function userIdFromSupabase(accessToken: string): Promise<string | null> {
+  const { data, error } = await authClient().auth.getUser(accessToken);
+  return error ? null : data.user.id;
 }
 
 // ---------- 현재 사용자 ----------

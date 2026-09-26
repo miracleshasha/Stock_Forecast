@@ -14,7 +14,7 @@ export default function LogoutButton() {
       await fetch("/api/auth/logout", { method: "POST" });
     } finally {
       resetFavorites();
-      router.replace("/");
+      router.replace("/login?mode=login");
       router.refresh();
     }
   }

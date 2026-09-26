@@ -420,3 +420,5 @@ button { font-family: inherit; color: inherit; }
   border: 0; background: none; padding: 0; cursor: pointer;
   font-size: inherit; font-weight: 600; color: var(--ink); text-decoration: underline;
 }
+.intro { padding: 20px 4px 4px; display: flex; flex-direction: column; gap: 8px; }
+.intro__t { font-size: 24px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.4; }

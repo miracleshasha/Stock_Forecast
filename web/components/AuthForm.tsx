@@ -140,7 +140,8 @@ export default function AuthForm({ initialMode, next }: { initialMode: Mode; nex
 
       {signup ? (
         <p className="caption" style={{ textAlign: "center" }}>
-          비밀번호를 잊으면 문자·메일로 찾을 수 없어요. 꼭 기억해 두세요.
+          가입하면 이 기기에서는 자동으로 로그인돼요. 비밀번호를 잊으면 문자·메일로 찾을 수
+          없으니 꼭 기억해 두세요.
         </p>
       ) : (
         <p className="caption" style={{ textAlign: "center" }}>

@@ -27,23 +27,25 @@ export default function TopBar({ who }: { who: string | null }) {
             시그널데스크
           </Link>
         )}
-        <nav className="topnav" aria-label="주요 메뉴">
-          <Link href="/" className={path === "/" ? "on" : undefined}>
-            홈
-          </Link>
-          <Link href="/favorites" className={path === "/favorites" ? "on" : undefined}>
-            즐겨찾기
-          </Link>
-          {who ? (
-            <Link href="/account" className={path === "/account" ? "on" : undefined}>
-              내 정보
+        {path !== "/login" && (
+          <nav className="topnav" aria-label="주요 메뉴">
+            <Link href="/" className={path === "/" ? "on" : undefined}>
+              홈
             </Link>
-          ) : (
-            <Link href="/login" className={path === "/login" ? "on" : undefined}>
-              로그인
+            <Link href="/favorites" className={path === "/favorites" ? "on" : undefined}>
+              즐겨찾기
             </Link>
-          )}
-        </nav>
+            {who ? (
+              <Link href="/account" className={path === "/account" ? "on" : undefined}>
+                내 정보
+              </Link>
+            ) : (
+              <Link href="/login" className={path === "/login" ? "on" : undefined}>
+                로그인
+              </Link>
+            )}
+          </nav>
+        )}
       </div>
     </header>
   );

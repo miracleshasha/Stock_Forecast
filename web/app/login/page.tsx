@@ -20,7 +20,18 @@ export default async function LoginPage({
 
   return (
     <main className="shell">
-      <AuthForm initialMode={mode === "signup" ? "signup" : "login"} next={to} />
+      <div className="intro">
+        <p className="intro__t">
+          종목을 검색하면
+          <br />
+          지금 차트 흐름을 한눈에 보여드려요
+        </p>
+        <p className="sec-desc">
+          추세·모멘텀·밴드·거래량을 하나의 점수로 요약해요. 가입하면 바로 쓸 수 있어요.
+        </p>
+      </div>
+      {/* 로그인은 자동으로 유지되므로 이 화면을 보는 사람은 대부분 처음 온 사람 → 가입이 기본 */}
+      <AuthForm initialMode={mode === "login" ? "login" : "signup"} next={to} />
     </main>
   );
 }

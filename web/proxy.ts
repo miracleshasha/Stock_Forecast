@@ -1,45 +1,74 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { COOKIE, clearSessionCookies, refresh, writeSessionCookies } from "@/lib/auth";
+import {
+  COOKIE,
+  clearSessionCookies,
+  refresh,
+  userIdFromSupabase,
+  writeSessionCookies,
+} from "@/lib/auth";
+import { peekExp, verifyAccessToken } from "@/lib/jwt";
 
-/** JWT 의 exp(초). 서명 검증은 하지 않습니다 — 갱신 시점을 정하는 용도로만 씁니다. */
-function expOf(token: string): number {
+/** 로그인 없이 열리는 경로 */
+const PUBLIC = [/^\/login$/, /^\/api\/auth\//];
+
+async function isValid(token: string | undefined): Promise<boolean> {
+  if (!token) return false;
   try {
-    const payload = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString());
-    return typeof payload.exp === "number" ? payload.exp : 0;
-  } catch {
-    return 0;
+    const v = await verifyAccessToken(token);
+    if (v === "unsupported") return (await userIdFromSupabase(token)) != null;
+    return v != null;
+  } catch (e) {
+    console.error("[proxy] token verify failed", e);
+    return false;
   }
 }
 
+function denied(req: NextRequest): NextResponse {
+  const { pathname, search } = req.nextUrl;
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.json({ message: "로그인이 필요해요." }, { status: 401 });
+  }
+  const url = req.nextUrl.clone();
+  url.pathname = "/login";
+  url.search = "";
+  const next = pathname + search;
+  if (next !== "/") url.searchParams.set("next", next);
+  return NextResponse.redirect(url);
+}
+
 /**
- * 로그인 유지: 액세스 토큰(1시간)이 없거나 곧 만료되면 리프레시 토큰으로 갱신해
- * 쿠키를 새로 씁니다. 서버 컴포넌트는 쿠키를 쓸 수 없어서 여기서 처리합니다.
+ * 로그인 게이트 + 자동 로그인.
+ * 1) 액세스 토큰이 유효하면 통과
+ * 2) 없거나 곧 만료면 리프레시 토큰(최대 400일 보관)으로 새로 발급해 통과
+ * 3) 둘 다 안 되면 페이지는 /login 으로, API 는 401
  */
 export async function proxy(req: NextRequest) {
-  const rt = req.cookies.get(COOKIE.refresh)?.value;
-  if (!rt) return NextResponse.next();
-
+  const isPublic = PUBLIC.some((re) => re.test(req.nextUrl.pathname));
   const at = req.cookies.get(COOKIE.access)?.value;
-  if (at && expOf(at) - Date.now() / 1000 > 60) return NextResponse.next();
+  const rt = req.cookies.get(COOKIE.refresh)?.value;
 
-  const session = await refresh(rt);
-  if (!session) {
-    // 폐기·만료된 리프레시 토큰 → 로그아웃 상태로 정리
-    for (const name of Object.values(COOKIE)) req.cookies.delete(name);
-    const res = NextResponse.next({ request: { headers: req.headers } });
-    clearSessionCookies(res.cookies);
-    return res;
+  const fresh = at != null && peekExp(at) - Date.now() / 1000 > 60;
+  if (fresh && (await isValid(at))) return NextResponse.next();
+
+  if (rt) {
+    const session = await refresh(rt);
+    if (session) {
+      // 이번 요청의 서버 렌더도 새 토큰을 보도록 요청 쿠키까지 바꿔 넘깁니다
+      req.cookies.set(COOKIE.access, session.access_token);
+      req.cookies.set(COOKIE.refresh, session.refresh_token);
+      const res = NextResponse.next({ request: { headers: req.headers } });
+      writeSessionCookies(res.cookies, session);
+      return res;
+    }
   }
 
-  // 이번 요청의 서버 렌더도 새 토큰을 보도록 요청 쿠키까지 바꿔 넘깁니다
-  req.cookies.set(COOKIE.access, session.access_token);
-  req.cookies.set(COOKIE.refresh, session.refresh_token);
-  const res = NextResponse.next({ request: { headers: req.headers } });
-  writeSessionCookies(res.cookies, session);
+  // 로그인 상태가 아님 — 남은 쿠키 정리
+  const res = isPublic ? NextResponse.next() : denied(req);
+  if (at || rt || req.cookies.get(COOKIE.who)) clearSessionCookies(res.cookies);
   return res;
 }
 
 export const config = {
-  // 정적 파일·이미지·차트/시세 API 는 제외 (로그인과 무관, 호출이 잦음)
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/stock|api/search|api/macro|api/favorites).*)"],
+  // 정적 파일만 제외하고 전부(페이지 + 데이터 API) 게이트를 거칩니다
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
