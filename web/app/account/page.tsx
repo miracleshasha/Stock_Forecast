@@ -35,7 +35,7 @@ export default async function AccountPage() {
       </section>
       <section className="card">
         <p className="sec-desc">
-          즐겨찾기는 아직 이 브라우저에만 저장돼요. 계정 동기화는 다음 단계에서 붙일 예정이에요.
+          즐겨찾기는 계정에 저장돼서 다른 기기에서 로그인해도 그대로 보여요.
         </p>
         <LogoutButton />
       </section>

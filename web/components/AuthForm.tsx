@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { resetFavorites } from "@/lib/favorites";
 import { PASSWORD_MIN, formatPhone, isValidPhone, normalizePhone } from "@/lib/phone";
 
 type Mode = "login" | "signup";
@@ -42,6 +43,7 @@ export default function AuthForm({ initialMode, next }: { initialMode: Mode; nex
         setError(body?.message ?? "잠시 뒤 다시 시도해 주세요.");
         return;
       }
+      resetFavorites(); // 이제 계정 모드 — 다음 화면에서 브라우저 즐겨찾기를 계정으로 합칩니다
       router.replace(next);
       router.refresh();
     } catch {

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { resetFavorites } from "@/lib/favorites";
 
 export default function LogoutButton() {
   const router = useRouter();
@@ -12,6 +13,7 @@ export default function LogoutButton() {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
     } finally {
+      resetFavorites();
       router.replace("/");
       router.refresh();
     }

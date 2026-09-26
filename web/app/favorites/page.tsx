@@ -9,7 +9,9 @@ import { zoneTone } from "@/lib/format";
 import {
   FAVORITES_EVENT,
   FAVORITES_MAX,
+  favoritesInAccount,
   getFavorites,
+  loadFavorites,
   removeFavorite,
 } from "@/lib/favorites";
 import type { FavoriteRow } from "@/lib/db";
@@ -27,11 +29,20 @@ export default function FavoritesPage() {
   const [rows, setRows] = useState<FavoriteRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [sort, setSort] = useState<Sort>("signal");
+  // 계정 즐겨찾기는 서버에서 불러오므로, 불러오기 전엔 "비어 있음"을 보여주지 않습니다
+  const [ready, setReady] = useState(false);
+  const [inAccount, setInAccount] = useState(false);
 
   useEffect(() => {
-    const sync = () => setTickers(getFavorites().map((f) => f.ticker));
-    sync();
+    const sync = () => {
+      setTickers(getFavorites().map((f) => f.ticker));
+      setInAccount(favoritesInAccount());
+    };
     window.addEventListener(FAVORITES_EVENT, sync);
+    loadFavorites().then(() => {
+      sync();
+      setReady(true);
+    });
     return () => window.removeEventListener(FAVORITES_EVENT, sync);
   }, []);
 
@@ -80,7 +91,7 @@ export default function FavoritesPage() {
         </span>
       </div>
 
-      {loading && tickers.length > 0 && (
+      {(!ready || (loading && tickers.length > 0)) && (
         <section className="card" style={{ gap: 14 }} aria-busy="true">
           <div className="skel" style={{ width: "60%" }} />
           <div className="skel" style={{ width: "80%", height: 26 }} />
@@ -88,7 +99,7 @@ export default function FavoritesPage() {
         </section>
       )}
 
-      {!loading && tickers.length === 0 && (
+      {ready && !loading && tickers.length === 0 && (
         <div className="state">
           <span className="state__ic"><Icon name="star" size={36} /></span>
           <div className="state__t">아직 즐겨찾기가 없어요</div>
@@ -129,7 +140,7 @@ export default function FavoritesPage() {
                 type="button"
                 className="iconbtn"
                 style={{ color: "var(--faint)" }}
-                onClick={() => removeFavorite(r.ticker)}
+                onClick={() => removeFavorite(r.ticker).catch(() => window.alert("삭제하지 못했어요. 잠시 뒤 다시 시도해 주세요."))}
                 aria-label={`${r.name} 즐겨찾기 삭제`}
                 title="삭제"
               >
@@ -140,9 +151,19 @@ export default function FavoritesPage() {
         </section>
       )}
 
-      {tickers.length > 0 && (
+      {ready && (
         <p className="caption" style={{ textAlign: "center" }}>
-          즐겨찾기는 이 브라우저에만 저장돼요.
+          {inAccount ? (
+            "즐겨찾기가 계정에 저장돼요. 다른 기기에서 로그인해도 그대로 보여요."
+          ) : (
+            <>
+              지금은 이 브라우저에만 저장돼요.{" "}
+              <Link href="/login?next=/favorites" className="linkbtn">
+                로그인
+              </Link>
+              하면 계정에 저장돼요.
+            </>
+          )}
         </p>
       )}
     </main>
