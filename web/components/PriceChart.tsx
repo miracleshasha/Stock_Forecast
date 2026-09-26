@@ -26,7 +26,7 @@ const RANGES: { key: ChartRange; label: string }[] = [
 ];
 
 type Opts = { candle: boolean; ma: boolean; bb: boolean; env: boolean; vol: boolean };
-const DEFAULT_OPTS: Opts = { candle: false, ma: false, bb: false, env: false, vol: false };
+const DEFAULT_OPTS: Opts = { candle: true, ma: true, bb: true, env: true, vol: true };
 const OPTS_KEY = "sd.chartOpts.v2";
 
 function loadOpts(): Opts {
