@@ -141,6 +141,19 @@ export async function getSessionUser(): Promise<User | null> {
   return error ? null : data.user;
 }
 
+/**
+ * 현재 사용자 id. 액세스 토큰 서명을 로컬(JWKS)로 검증해 네트워크 왕복을 줄입니다.
+ * 구형 HS256 토큰이면 Supabase 에 확인합니다.
+ */
+export async function getSessionUserId(): Promise<string | null> {
+  const token = (await cookies()).get(COOKIE.access)?.value;
+  if (!token) return null;
+  const { verifyAccessToken } = await import("./jwt");
+  const v = await verifyAccessToken(token).catch(() => null);
+  if (v === "unsupported") return userIdFromSupabase(token);
+  return v?.sub ?? null;
+}
+
 /** 상단 바 등에 쓰는 표시용 이름(검증 없음). 로그인 여부 판단에 쓰지 마세요. */
 export async function getDisplayWho(): Promise<string | null> {
   const v = (await cookies()).get(COOKIE.who)?.value;

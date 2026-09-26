@@ -303,6 +303,15 @@ def main(argv: list[str]):
             traceback.print_exc()
 
     print(f"\n완료: 성공 {ok} · 실패 {fail}")
+
+    # 홈 화면 요약 갱신 (실패해도 적재 결과는 유효하므로 배치는 성공으로 둡니다)
+    if ok:
+        try:
+            supabase_io.refresh_home_stats()
+            print("홈 요약(mv_home_stats) 갱신 완료")
+        except Exception as e:  # noqa: BLE001
+            print(f"  [경고] 홈 요약 갱신 실패: {e}")
+
     if fail and not ok:
         raise SystemExit(1)
 

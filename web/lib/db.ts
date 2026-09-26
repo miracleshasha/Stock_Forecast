@@ -339,80 +339,8 @@ export async function getFavoriteRows(tickers: string[]): Promise<FavoriteRow[]>
   });
 }
 
-// ---------- 홈: 오늘의 매수/매도 신호 ----------
-export interface TopRow {
-  ticker: string;
-  name: string;
-  market: Market;
-  currency: "KRW" | "USD";
-  score: number;
-  zone: Zone;
-  price: number | null;
-  changePct: number | null;
-}
-
-export type Region = "ALL" | "KR" | "US";
-export type TopSignals = Record<Region, { buys: TopRow[]; sells: TopRow[] }>;
-
 const KR_MARKETS = new Set(["KOSPI", "KOSDAQ"]);
 const regionOf = (market: string): "KR" | "US" => (KR_MARKETS.has(market) ? "KR" : "US");
-
-/** 홈 목록: 전체/국내/해외 각각 상·하위 limit개.
- *  v_latest_signal 에는 시장 정보가 없어 전 종목(~670행, 1000행 캡 이내)을
- *  한 번 읽고 symbols 와 합쳐 나눕니다. */
-export async function getTopSignals(limit = 5): Promise<TopSignals> {
-  const empty = { buys: [], sells: [] };
-  const out: TopSignals = { ALL: empty, KR: empty, US: empty };
-  const sb = getSupabase();
-  if (!sb) return out;
-
-  const [sigRes, symRes] = await Promise.all([
-    sb.from("v_latest_signal").select("ticker, score, zone").limit(5000),
-    sb.from("symbols").select("ticker, market, name_ko, name_en, currency").eq("is_active", true).limit(5000),
-  ]);
-  const symMap = new Map((symRes.data ?? []).map((r) => [r.ticker as string, r]));
-  const sigs = (sigRes.data ?? [])
-    .filter((r) => symMap.has(r.ticker as string) && r.zone !== "UNAVAILABLE")
-    .map((r) => ({ ticker: r.ticker as string, score: Number(r.score), zone: r.zone as Zone }));
-
-  const pick = (region: Region) => {
-    const pool = region === "ALL"
-      ? sigs
-      : sigs.filter((r) => regionOf(symMap.get(r.ticker)!.market as string) === region);
-    const desc = [...pool].sort((a, b) => b.score - a.score);
-    return {
-      buys: desc.slice(0, limit).filter((r) => r.score > 0),
-      sells: desc.slice(-limit).reverse().filter((r) => r.score < 0),
-    };
-  };
-  const picked = { ALL: pick("ALL"), KR: pick("KR"), US: pick("US") };
-
-  const tickers = [...new Set(
-    Object.values(picked).flatMap((p) => [...p.buys, ...p.sells].map((r) => r.ticker)),
-  )];
-  const quotes = await getLatestQuotes(tickers);
-
-  const build = (rows: { ticker: string; score: number; zone: Zone }[]): TopRow[] =>
-    rows.map((r) => {
-      const s = symMap.get(r.ticker)!;
-      const qt = quotes.get(r.ticker);
-      return {
-        ticker: r.ticker,
-        name: displayName(s),
-        market: s.market as Market,
-        currency: (s.currency as "KRW" | "USD") ?? "KRW",
-        score: r.score,
-        zone: r.zone,
-        price: qt?.close ?? null,
-        changePct: qt?.changePct ?? null,
-      };
-    });
-
-  for (const k of ["ALL", "KR", "US"] as Region[]) {
-    out[k] = { buys: build(picked[k].buys), sells: build(picked[k].sells) };
-  }
-  return out;
-}
 
 // ---------- 종목 상세: 참고 정보 ----------
 export interface StockExtras {

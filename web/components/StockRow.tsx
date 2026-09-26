@@ -17,10 +17,13 @@ export default function StockRow({
   row,
   rank,
   onNavigate,
+  badge,
 }: {
   row: StockRowData;
   rank?: number;
   onNavigate?: () => void;
+  /** 점수 대신 보여줄 배지(예: 12개월 수익률, 거래량 배수) */
+  badge?: { text: string; tone: "up" | "down" | "neu"; label?: string };
 }) {
   const scoreTone = row.score == null ? "neu" : row.score > 0 ? "up" : row.score < 0 ? "down" : "neu";
   return (
@@ -39,9 +42,15 @@ export default function StockRow({
         <span className="li__price num">{formatPrice(row.price, row.currency)}</span>
         <span className={`li__chg num ${changeTone(row.changePct)}`}>{formatPct(row.changePct)}</span>
       </span>
-      <span className={`score num ${scoreTone}`} aria-label={`점수 ${row.score ?? "없음"}`}>
-        {row.score == null ? "—" : formatScore(row.score)}
-      </span>
+      {badge ? (
+        <span className={`score num ${badge.tone}`} aria-label={badge.label ?? badge.text}>
+          {badge.text}
+        </span>
+      ) : (
+        <span className={`score num ${scoreTone}`} aria-label={`점수 ${row.score ?? "없음"}`}>
+          {row.score == null ? "—" : formatScore(row.score)}
+        </span>
+      )}
     </Link>
   );
 }

@@ -153,3 +153,12 @@ def upsert(table: str, rows: list[dict], on_conflict: str, chunk: int = 500):
         )
         if resp.status_code >= 300:
             raise RuntimeError(f"upsert {table} 실패 [{resp.status_code}]: {resp.text[:400]}")
+
+
+def refresh_home_stats():
+    """홈 화면 요약(mv_home_stats)을 다시 계산합니다. 적재가 끝난 뒤 한 번 부르세요.
+    670종목 × 1년치를 훑어 수 초 걸리므로 타임아웃을 넉넉히 둡니다."""
+    url = f"{config.SUPABASE_URL}/rest/v1/rpc/refresh_home_stats"
+    resp = requests.post(url, headers=_headers(), json={}, timeout=120)
+    if resp.status_code >= 300:
+        raise RuntimeError(f"refresh_home_stats 실패 [{resp.status_code}]: {resp.text[:300]}")
