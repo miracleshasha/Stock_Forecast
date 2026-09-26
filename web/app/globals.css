@@ -100,12 +100,13 @@ button { font-family: inherit; color: inherit; }
   max-width: var(--maxw); margin: 0 auto; height: var(--nav-h);
   display: flex; justify-content: space-around; align-items: center;
 }
-.bottomnav a {
+.bottomnav a, .bottomnav button {
+  border: 0; background: transparent; cursor: pointer; font-family: inherit;
   min-width: 72px; min-height: 48px; display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 2px;
   font-size: 12px; font-weight: 500; color: var(--faint);
 }
-.bottomnav a.on { color: var(--ink); font-weight: 600; }
+.bottomnav a.on, .bottomnav button.on { color: var(--ink); font-weight: 600; }
 
 @media (min-width: 768px) {
   .topnav { display: flex; }
@@ -422,3 +423,16 @@ button { font-family: inherit; color: inherit; }
 }
 .intro { padding: 20px 4px 4px; display: flex; flex-direction: column; gap: 8px; }
 .intro__t { font-size: 24px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.4; }
+
+/* ---------- 검색 시트 (모바일 하단 탭) ---------- */
+.sheet {
+  position: fixed; inset: 0; z-index: 70; background: var(--bg);
+  display: flex; flex-direction: column; overflow-y: auto;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.sheet__hd {
+  flex: none; height: 56px; padding: 0 8px 0 20px; max-width: var(--maxw); width: 100%; margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.sheet__t { font-size: 19px; font-weight: 700; letter-spacing: -0.03em; }
+.sheet__body { padding: 4px 16px 24px; max-width: var(--maxw); width: 100%; margin: 0 auto; }

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import Icon from "@/components/Icon";
 import StockRow from "@/components/StockRow";
 import { useNavProgress } from "@/components/NavProgress";
+import { useSearchSheet } from "@/components/SearchSheet";
 import { zoneTone } from "@/lib/format";
 import {
   FAVORITES_EVENT,
@@ -25,6 +26,7 @@ const SORTS: { key: Sort; label: string }[] = [
 
 export default function FavoritesPage() {
   const { start } = useNavProgress();
+  const { openSearch } = useSearchSheet();
   const [tickers, setTickers] = useState<string[]>([]);
   const [rows, setRows] = useState<FavoriteRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -106,9 +108,9 @@ export default function FavoritesPage() {
           <div className="state__d">
             관심 종목을 검색하고 별표를 누르면 여기에 모여요.
           </div>
-          <Link href="/#search" className="btn">
+          <button type="button" className="btn" onClick={openSearch}>
             종목 검색하기
-          </Link>
+          </button>
         </div>
       )}
 

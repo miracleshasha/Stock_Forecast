@@ -4,6 +4,7 @@ import Providers from "./providers";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import NavProgress from "@/components/NavProgress";
+import SearchSheetProvider from "@/components/SearchSheet";
 import { getDisplayWho } from "@/lib/auth";
 
 export const metadata: Metadata = {
@@ -33,9 +34,11 @@ export default async function RootLayout({
       <body>
         <Providers>
           <NavProgress>
-            <TopBar who={who} />
-            {children}
-            <BottomNav who={who} />
+            <SearchSheetProvider>
+              <TopBar who={who} />
+              {children}
+              <BottomNav who={who} />
+            </SearchSheetProvider>
           </NavProgress>
         </Providers>
       </body>

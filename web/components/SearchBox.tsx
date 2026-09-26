@@ -9,7 +9,17 @@ import { useNavProgress } from "./NavProgress";
 
 const SUGGESTIONS = ["삼성전자", "SK하이닉스", "NVDA", "AAPL", "에코프로비엠"];
 
-export default function SearchBox({ autoFocus = false }: { autoFocus?: boolean }) {
+export default function SearchBox({
+  autoFocus = false,
+  registerInput,
+  onPick,
+}: {
+  autoFocus?: boolean;
+  /** 입력창 요소를 받아 둘 곳. 검색 시트가 탭한 순간 바로 포커스를 주는 데 씁니다. */
+  registerInput?: (el: HTMLInputElement | null) => void;
+  /** 종목을 골랐을 때(검색 시트 닫기용) */
+  onPick?: () => void;
+}) {
   const router = useRouter();
   const { start } = useNavProgress();
   const [q, setQ] = useState("");
@@ -69,6 +79,7 @@ export default function SearchBox({ autoFocus = false }: { autoFocus?: boolean }
 
   function go(ticker: string) {
     setOpen(false);
+    onPick?.();
     setNavigating(true);
     start();
     router.push(`/stock/${ticker}`);
@@ -103,7 +114,10 @@ export default function SearchBox({ autoFocus = false }: { autoFocus?: boolean }
           <Icon name="search" size={22} />
         )}
         <input
-          ref={inputRef}
+          ref={(el) => {
+            inputRef.current = el;
+            registerInput?.(el);
+          }}
           type="search"
           autoFocus={autoFocus}
           value={q}
