@@ -31,17 +31,29 @@ def get_active_symbols() -> list[dict]:
 
 
 def get_prices(ticker: str) -> list[dict]:
-    """종목 일봉 전체(오름차순). 백테스트/재계산용."""
+    """종목 일봉 전체(오름차순). 백테스트/재계산용.
+
+    PostgREST는 limit와 무관하게 한 응답을 1000행(max-rows)에서 자릅니다.
+    LOOKBACK 1000 + 평일 증분분이면 1000행을 넘고, 오름차순이라 한 번만
+    받으면 가장 최근 며칠이 빠집니다 → 페이지를 넘겨 끝까지 받습니다.
+    """
     url = f"{config.SUPABASE_URL}/rest/v1/daily_prices"
-    params = {
-        "select": "trade_date,open,high,low,close,volume",
-        "ticker": f"eq.{ticker}",
-        "order": "trade_date.asc",
-        "limit": "2000",
-    }
-    resp = requests.get(url, headers=_headers(), params=params, timeout=30)
-    resp.raise_for_status()
-    rows = resp.json()
+    page = 1000
+    rows: list[dict] = []
+    while True:
+        params = {
+            "select": "trade_date,open,high,low,close,volume",
+            "ticker": f"eq.{ticker}",
+            "order": "trade_date.asc",
+            "limit": str(page),
+            "offset": str(len(rows)),
+        }
+        resp = requests.get(url, headers=_headers(), params=params, timeout=30)
+        resp.raise_for_status()
+        chunk = resp.json()
+        rows.extend(chunk)
+        if len(chunk) < page:
+            break
     # indicators.compute 가 기대하는 date(YYYYMMDD) 형식으로 변환
     for r in rows:
         r["date"] = r["trade_date"].replace("-", "")
