@@ -363,3 +363,54 @@ export async function getInvestorFlows(byTicker: Map<string, HomeRow>, limit = 5
     total: { foreign: sum("foreign_net_amt"), inst: sum("inst_net_amt"), indiv: sum("indiv_net_amt"), count: rows.length },
   };
 }
+
+// ---------- ⑨ 다가오는 경제 일정 ----------
+export interface EconEvent {
+  date: string; // YYYY-MM-DD (한국 날짜)
+  timeKst: string | null; // "21:30"
+  country: "US" | "KR";
+  title: string;
+  category: string;
+  detail: string | null;
+  sourceUrl: string | null;
+  /** 오늘 기준 며칠 뒤(0 = 오늘) */
+  dday: number;
+}
+
+/** 한국 시각 기준 오늘 날짜와 현재 시각 "HH:MM" */
+function nowKst(): { date: string; time: string } {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  }).formatToParts(new Date());
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  return { date: `${get("year")}-${get("month")}-${get("day")}`, time: `${get("hour")}:${get("minute")}` };
+}
+
+export async function getUpcomingEvents(limit = 5): Promise<EconEvent[]> {
+  const sb = getSupabase();
+  if (!sb) return [];
+  const now = nowKst();
+  const { data } = await sb
+    .from("econ_events")
+    .select("event_date, event_time_kst, country, title, category, detail, source_url")
+    .gte("event_date", now.date)
+    .order("event_date", { ascending: true })
+    .order("event_time_kst", { ascending: true, nullsFirst: true })
+    .limit(limit + 3);
+  const today = Date.parse(`${now.date}T00:00:00Z`);
+  return (data ?? [])
+    .map((r) => ({
+      date: r.event_date as string,
+      timeKst: r.event_time_kst ? String(r.event_time_kst).slice(0, 5) : null,
+      country: r.country as "US" | "KR",
+      title: r.title as string,
+      category: r.category as string,
+      detail: (r.detail as string) ?? null,
+      sourceUrl: (r.source_url as string) ?? null,
+      dday: Math.round((Date.parse(`${r.event_date}T00:00:00Z`) - today) / 864e5),
+    }))
+    // 오늘 이미 지난 발표는 빼기
+    .filter((e) => !(e.dday === 0 && e.timeKst && e.timeKst < now.time))
+    .slice(0, limit);
+}

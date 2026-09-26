@@ -487,3 +487,17 @@ button { font-family: inherit; color: inherit; }
 .sector__gap { text-align: center; color: var(--faint); font-size: 14px; letter-spacing: 2px; padding: 2px 0; }
 .mood__bar--thin { height: 6px; border-radius: 3px; }
 .list-summary { word-break: keep-all; font-size: 13px; color: var(--sub); background: var(--soft); border-radius: 10px; padding: 8px 12px; margin-top: 8px; }
+
+/* ---------- 경제 일정 ---------- */
+.events { list-style: none; display: flex; flex-direction: column; }
+.event { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
+.event + .event { border-top: 1px solid var(--line); }
+.event__dday {
+  flex: none; min-width: 48px; text-align: center; padding: 6px 0; border-radius: 8px;
+  background: var(--soft); color: var(--sub); font-size: 13px; font-weight: 700;
+}
+.event__dday--soon { background: var(--ink); color: #fff; }
+.event__main { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.event__title { font-size: 15px; font-weight: 600; word-break: keep-all; }
+.event__meta { font-size: 13px; color: var(--cap); word-break: keep-all; }
+.event__src { flex: none; font-size: 12px; color: var(--cap); text-decoration: underline; min-height: 44px; display: inline-flex; align-items: center; }

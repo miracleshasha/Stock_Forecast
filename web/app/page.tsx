@@ -1,5 +1,6 @@
 import SearchBox from "@/components/SearchBox";
 import SetupNotice from "@/components/SetupNotice";
+import EconCalendar from "@/components/home/EconCalendar";
 import FavoritesSummary from "@/components/home/FavoritesSummary";
 import MarketMood from "@/components/home/MarketMood";
 import MarketTemps from "@/components/home/MarketTemps";
@@ -7,7 +8,7 @@ import SectorFlow from "@/components/home/SectorFlow";
 import TabbedList, { type ListTab } from "@/components/home/TabbedList";
 import { getSessionUserId } from "@/lib/auth";
 import { formatDateKo, formatWonMillion } from "@/lib/format";
-import { getHomeData, getInvestorFlows, getMarketTemps, type HomeRow, type RankedRow } from "@/lib/home";
+import { getHomeData, getInvestorFlows, getMarketTemps, getUpcomingEvents, type HomeRow, type RankedRow } from "@/lib/home";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { listFavorites } from "@/lib/userFavorites";
 
@@ -32,9 +33,10 @@ export default async function HomePage() {
   }
 
   const userId = await getSessionUserId();
-  const [home, temps, favs] = await Promise.all([
+  const [home, temps, events, favs] = await Promise.all([
     getHomeData(5),
     getMarketTemps(),
+    getUpcomingEvents(5).catch(() => []),
     userId ? listFavorites(userId).catch(() => []) : Promise.resolve([]),
   ]);
   if (!home) return <main className="shell"><SetupNotice /></main>;
@@ -107,6 +109,7 @@ export default async function HomePage() {
       <FavoritesSummary rows={favRows.slice(0, FAV_PREVIEW)} total={favRows.length} />
       <MarketMood KR={home.breadth.KR} US={home.breadth.US} />
       <MarketTemps temps={temps} />
+      <EconCalendar events={events} />
       <TabbedList
         title="12개월 흐름 상위"
         desc="최근 1개월을 뺀 1년 수익률이 높은 종목이에요. 판정 점수와는 별개인 참고 지표예요."
