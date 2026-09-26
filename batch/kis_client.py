@@ -252,6 +252,44 @@ def _finalize(out: dict, target_rows: int) -> list[dict]:
     return rows[-target_rows:]
 
 
+# ---------------------------------------------------------------- 국내 부가정보
+def fetch_domestic_sector(code: str) -> str | None:
+    """국내 종목 업종명(예: '전기·전자'). 현재가 조회 응답의 bstp_kor_isnm."""
+    data = _get(
+        "/uapi/domestic-stock/v1/quotations/inquire-price",
+        "FHKST01010100",
+        {"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code},
+    )
+    name = (data.get("output") or {}).get("bstp_kor_isnm")
+    return name.strip() if name else None
+
+
+def fetch_investor_flow(code: str) -> list[dict]:
+    """투자자별 순매수(최근 30거래일). 금액 단위는 백만원.
+    당일 값은 장 마감 후에도 잠정치일 수 있어 매일 30일치를 다시 받아 덮어씁니다."""
+    data = _get(
+        "/uapi/domestic-stock/v1/quotations/inquire-investor",
+        "FHKST01010900",
+        {"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code},
+    )
+    out = []
+    for r in data.get("output") or []:
+        d = r.get("stck_bsop_date")
+        if not d:
+            continue
+        num = lambda k: None if _f(r.get(k)) is None else int(_f(r.get(k)))  # noqa: E731
+        out.append({
+            "date": d,
+            "indiv_net_qty": num("prsn_ntby_qty"),
+            "foreign_net_qty": num("frgn_ntby_qty"),
+            "inst_net_qty": num("orgn_ntby_qty"),
+            "indiv_net_amt": num("prsn_ntby_tr_pbmn"),
+            "foreign_net_amt": num("frgn_ntby_tr_pbmn"),
+            "inst_net_amt": num("orgn_ntby_tr_pbmn"),
+        })
+    return out
+
+
 def iso(d: str) -> str:
     """YYYYMMDD → YYYY-MM-DD"""
     return f"{d[0:4]}-{d[4:6]}-{d[6:8]}"

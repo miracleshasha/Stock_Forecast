@@ -14,7 +14,18 @@ export type ListTab = {
 };
 
 /** 탭(국내/해외, 신고가/신저가 등)으로 바꿔 보는 종목 목록 카드 */
-export default function TabbedList({ title, desc, tabs }: { title: string; desc: string; tabs: ListTab[] }) {
+export default function TabbedList({
+  title,
+  desc,
+  tabs,
+  summary,
+}: {
+  title: string;
+  desc: string;
+  tabs: ListTab[];
+  /** 설명 아래 한 줄 요약(예: 투자자별 합계) */
+  summary?: React.ReactNode;
+}) {
   const [key, setKey] = useState(tabs[0]?.key);
   const tab = tabs.find((t) => t.key === key) ?? tabs[0];
   if (!tab) return null;
@@ -22,6 +33,7 @@ export default function TabbedList({ title, desc, tabs }: { title: string; desc:
     <section className="card card--list" aria-label={title}>
       <h2 className="sec-title">{title}</h2>
       <p className="sec-desc">{desc}</p>
+      {summary && <div className="list-summary">{summary}</div>}
       <div className="chips" role="tablist" aria-label={title} style={{ margin: "10px 0 4px" }}>
         {tabs.map((t) => (
           <button

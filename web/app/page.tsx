@@ -3,9 +3,11 @@ import SetupNotice from "@/components/SetupNotice";
 import FavoritesSummary from "@/components/home/FavoritesSummary";
 import MarketMood from "@/components/home/MarketMood";
 import MarketTemps from "@/components/home/MarketTemps";
+import SectorFlow from "@/components/home/SectorFlow";
 import TabbedList, { type ListTab } from "@/components/home/TabbedList";
 import { getSessionUserId } from "@/lib/auth";
-import { getHomeData, getMarketTemps, type HomeRow, type RankedRow } from "@/lib/home";
+import { formatDateKo, formatWonMillion } from "@/lib/format";
+import { getHomeData, getInvestorFlows, getMarketTemps, type HomeRow, type RankedRow } from "@/lib/home";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { listFavorites } from "@/lib/userFavorites";
 
@@ -36,6 +38,7 @@ export default async function HomePage() {
     userId ? listFavorites(userId).catch(() => []) : Promise.resolve([]),
   ]);
   if (!home) return <main className="shell"><SetupNotice /></main>;
+  const flows = await getInvestorFlows(home.byTicker).catch(() => null);
 
   // 즐겨찾기는 담은 순서 그대로, 최근에 담은 것부터 미리보기
   const favRows = favs
@@ -73,6 +76,23 @@ export default async function HomePage() {
     },
   ];
 
+  const investorTabs: ListTab[] = flows
+    ? [
+        {
+          key: "foreign",
+          label: "외국인",
+          items: flows.foreign.map((r) => ({ row: r, badge: { text: formatWonMillion(r.value), tone: "up", label: `외국인 순매수 ${formatWonMillion(r.value)}원` } })),
+          empty: "외국인이 순매수한 종목이 없어요",
+        },
+        {
+          key: "inst",
+          label: "기관",
+          items: flows.inst.map((r) => ({ row: r, badge: { text: formatWonMillion(r.value), tone: "up", label: `기관 순매수 ${formatWonMillion(r.value)}원` } })),
+          empty: "기관이 순매수한 종목이 없어요",
+        },
+      ]
+    : [];
+
   const flowTabs = (pick: "buys" | "sells"): ListTab[] => [
     { key: "ALL", label: "전체", items: plain(home.top.ALL[pick]) },
     { key: "KR", label: "국내", items: plain(home.top.KR[pick]) },
@@ -93,6 +113,22 @@ export default async function HomePage() {
         tabs={momentumTabs}
       />
       <TabbedList title="오늘의 특이 종목" desc="최근 거래일 기준으로 눈에 띄는 움직임이에요." tabs={moverTabs} />
+      <SectorFlow KR={home.sectors.KR} US={home.sectors.US} />
+      {flows && (
+        <TabbedList
+          title="외국인·기관 순매수 상위"
+          desc={`국내 분석 종목 기준 · ${formatDateKo(flows.date)}`}
+          tabs={investorTabs}
+          summary={
+            <>
+              {flows.total.count}종목 합계 ·{" "}
+              <span className={flows.total.foreign >= 0 ? "up" : "down"}>외국인 {formatWonMillion(flows.total.foreign)}</span> ·{" "}
+              <span className={flows.total.inst >= 0 ? "up" : "down"}>기관 {formatWonMillion(flows.total.inst)}</span> ·{" "}
+              <span className={flows.total.indiv >= 0 ? "up" : "down"}>개인 {formatWonMillion(flows.total.indiv)}</span>
+            </>
+          }
+        />
+      )}
       <TabbedList title="상승 흐름이 강한 종목" desc="기술 지표 점수가 높은 순서예요" tabs={flowTabs("buys")} />
       <TabbedList title="하락 흐름이 강한 종목" desc="기술 지표 점수가 낮은 순서예요" tabs={flowTabs("sells")} />
 

@@ -475,3 +475,15 @@ button { font-family: inherit; color: inherit; }
 .spark.up { color: var(--up); }
 .spark.down { color: var(--down); }
 .mood__date { font-weight: 500; color: var(--cap); font-size: 13px; }
+
+/* ---------- 업종별 흐름 · 투자자 ---------- */
+.sectors { display: flex; flex-direction: column; }
+.sector { display: flex; flex-direction: column; gap: 6px; padding: 10px 0; }
+.sectors > div + div .sector { border-top: 1px solid var(--line); }
+.sector__hd { display: flex; align-items: center; gap: 8px; }
+.sector__name { font-size: 15px; font-weight: 600; }
+.sector__n { font-size: 12px; color: var(--cap); }
+.sector__chg { margin-left: auto; font-size: 13px; font-weight: 600; }
+.sector__gap { text-align: center; color: var(--faint); font-size: 14px; letter-spacing: 2px; padding: 2px 0; }
+.mood__bar--thin { height: 6px; border-radius: 3px; }
+.list-summary { word-break: keep-all; font-size: 13px; color: var(--sub); background: var(--soft); border-radius: 10px; padding: 8px 12px; margin-top: 8px; }

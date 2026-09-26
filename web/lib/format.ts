@@ -107,3 +107,12 @@ export function formatDateKo(iso: string | null | undefined): string {
 export function initial(name: string): string {
   return Array.from(name.trim())[0]?.toUpperCase() ?? "?";
 }
+
+/** 백만원 단위 금액 → "+1.28조" / "-5,044억" / "+38억" */
+export function formatWonMillion(mil: number, signed = true): string {
+  const sign = signed ? (mil > 0 ? "+" : mil < 0 ? "-" : "") : mil < 0 ? "-" : "";
+  const a = Math.abs(mil);
+  if (a >= 1_000_000) return `${sign}${(a / 1_000_000).toFixed(2)}조`;
+  if (a >= 100) return `${sign}${Math.round(a / 100).toLocaleString("ko-KR")}억`;
+  return `${sign}${Math.round(a).toLocaleString("ko-KR")}백만`;
+}

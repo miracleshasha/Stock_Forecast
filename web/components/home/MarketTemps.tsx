@@ -18,6 +18,8 @@ function Sparkline({ values, tone }: { values: number[]; tone: string }) {
 
 function fmtValue(t: Temp): string {
   if (t.kind === "rate") return `${t.value.toFixed(2)}%`;
+  if (t.kind === "spread") return `${t.value > 0 ? "+" : ""}${t.value.toFixed(2)}%p`;
+  if (t.kind === "usd") return `$${t.value.toFixed(2)}`;
   if (t.kind === "vix") return t.value.toFixed(1);
   if (t.kind === "fx") return `${t.value.toLocaleString("ko-KR", { maximumFractionDigits: 1 })}원`;
   return t.value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -26,8 +28,8 @@ function fmtValue(t: Temp): string {
 function fmtChange(t: Temp): string {
   const sign = t.change > 0 ? "+" : t.change < 0 ? "−" : "";
   const a = Math.abs(t.change);
-  if (t.kind === "rate") return `${sign}${(a * 100).toFixed(0)}bp`;
-  if (t.kind === "index") return `${sign}${Math.abs((t.change / (t.value - t.change)) * 100).toFixed(2)}%`;
+  if (t.kind === "rate" || t.kind === "spread") return `${sign}${(a * 100).toFixed(0)}bp`;
+  if (t.kind === "index" || t.kind === "usd") return `${sign}${Math.abs((t.change / (t.value - t.change)) * 100).toFixed(2)}%`;
   if (t.kind === "fx") return `${sign}${a.toFixed(1)}원`;
   return `${sign}${a.toFixed(1)}`;
 }

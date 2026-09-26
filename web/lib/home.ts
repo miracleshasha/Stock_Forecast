@@ -47,9 +47,24 @@ export interface HomeData {
   momentum: { KR: RankedRow[]; US: RankedRow[] };
   /** 52주 신고가·신저가, 거래량 급증 (value = 거래량 배수) */
   movers: { highs: HomeRow[]; lows: HomeRow[]; volume: RankedRow[] };
+  /** ⑥ 업종별 흐름 (3종목 이상인 업종만, 평균 점수 높은 순) */
+  sectors: { KR: SectorStat[]; US: SectorStat[] };
   /** 종목별 행 조회용(즐겨찾기 요약) */
   byTicker: Map<string, HomeRow>;
 }
+
+export interface SectorStat {
+  name: string;
+  count: number;
+  up: number;
+  neutral: number;
+  down: number;
+  avgScore: number;
+  /** 최근 거래일 평균 등락률(%) */
+  avgChange: number | null;
+}
+
+const SECTOR_MIN = 3;
 
 type Stat = {
   ticker: string;
@@ -85,7 +100,7 @@ export async function getHomeData(limit = 5): Promise<HomeData | null> {
 
   const [statRes, symRes] = await Promise.all([
     sb.from("mv_home_stats").select("*").limit(5000),
-    sb.from("symbols").select("ticker, name_ko, name_en, currency").limit(5000),
+    sb.from("symbols").select("ticker, name_ko, name_en, currency, sector").limit(5000),
   ]);
   if (statRes.error) throw statRes.error;
   const names = new Map((symRes.data ?? []).map((r) => [r.ticker as string, r]));
@@ -169,8 +184,38 @@ export async function getHomeData(limit = 5): Promise<HomeData | null> {
     .map((s) => ({ ...toRow(s), value: s.vol_ratio20! }))
     .sort((a, b) => b.value - a.value);
 
+  // ⑥ 업종별 흐름
+  const sectorsOf = (rows: Stat[]): SectorStat[] => {
+    const groups = new Map<string, Stat[]>();
+    for (const s of rows) {
+      if (s.score == null || !s.zone || s.zone === "UNAVAILABLE") continue;
+      const name = (names.get(s.ticker)?.sector as string) || "기타";
+      groups.set(name, [...(groups.get(name) ?? []), s]);
+    }
+    return [...groups.entries()]
+      .filter(([, g]) => g.length >= SECTOR_MIN)
+      .map(([name, g]) => {
+        const changes = g
+          .filter((s) => s.close != null && s.prev_close)
+          .map((s) => (s.close! / s.prev_close! - 1) * 100);
+        const up = g.filter((s) => upZone(s.zone)).length;
+        const down = g.filter((s) => downZone(s.zone)).length;
+        return {
+          name,
+          count: g.length,
+          up,
+          down,
+          neutral: g.length - up - down,
+          avgScore: g.reduce((a, s) => a + s.score!, 0) / g.length,
+          avgChange: changes.length ? changes.reduce((a, b) => a + b, 0) / changes.length : null,
+        };
+      })
+      .sort((a, b) => b.avgScore - a.avgScore);
+  };
+
   return {
     breadth: { KR: breadthOf(inRegion("KR")), US: breadthOf(inRegion("US")) },
+    sectors: { KR: sectorsOf(inRegion("KR")), US: sectorsOf(inRegion("US")) },
     top: { ALL: topOf(stats), KR: topOf(inRegion("KR")), US: topOf(inRegion("US")) },
     momentum: { KR: momentumOf(inRegion("KR")), US: momentumOf(inRegion("US")) },
     movers: { highs, lows, volume },
@@ -186,7 +231,7 @@ export interface Temp {
   /** 직전 관측치 대비 */
   change: number;
   /** 표시 형식 */
-  kind: "index" | "rate" | "fx" | "vix";
+  kind: "index" | "rate" | "spread" | "fx" | "vix" | "usd";
   date: string;
   /** 최근 ~20개 관측치(스파크라인) */
   spark: number[];
@@ -211,11 +256,11 @@ async function fredSeries(id: string): Promise<{ date: string; value: number }[]
 
 const getFred = unstable_cache(
   async () => {
-    const ids = ["SP500", "VIXCLS", "DGS10", "DEXKOUS"] as const;
+    const ids = ["SP500", "VIXCLS", "DGS10", "T10Y2Y", "DCOILWTICO", "DEXKOUS"] as const;
     const results = await Promise.allSettled(ids.map(fredSeries));
     return Object.fromEntries(ids.map((id, i) => [id, results[i].status === "fulfilled" ? results[i].value : []]));
   },
-  ["home-fred-v1"],
+  ["home-fred-v2"],
   { revalidate: 3600 },
 );
 
@@ -270,7 +315,51 @@ export async function getMarketTemps(): Promise<Temp[]> {
       return d >= 1 ? "판정 점수를 그대로 반영하고 있어요" : `변동성이 커서 판정 점수를 ${Math.round(d * 100)}%로 줄였어요`;
     }),
     toTemp("us10y", "미국 10년물 금리", "rate", fred.DGS10 ?? []),
+    toTemp("t10y2y", "장단기 금리차 (10년−2년)", "spread", fred.T10Y2Y ?? [], (v) =>
+      v < 0 ? "단기 금리가 더 높은 역전 상태예요" : "장기 금리가 더 높은 정상 상태예요"),
+    toTemp("wti", "국제 유가 (WTI)", "usd", fred.DCOILWTICO ?? []),
     toTemp("usdkrw", "원/달러 환율", "fx", fred.DEXKOUS ?? [], () => "미 연준 자료라 1주일가량 늦게 갱신돼요"),
   ];
   return temps.filter((t): t is Temp => t != null);
+}
+
+// ---------- ⑦ 외국인·기관 순매수 (국내) ----------
+export interface FlowRow extends HomeRow {
+  /** 순매수 금액(백만원) */
+  value: number;
+}
+export interface InvestorFlows {
+  date: string;
+  foreign: FlowRow[];
+  inst: FlowRow[];
+  /** 분석 종목 합계(백만원) */
+  total: { foreign: number; inst: number; indiv: number; count: number };
+}
+
+export async function getInvestorFlows(byTicker: Map<string, HomeRow>, limit = 5): Promise<InvestorFlows | null> {
+  const sb = getSupabase();
+  if (!sb) return null;
+  const { data: latest } = await sb
+    .from("daily_investor_flow").select("trade_date").order("trade_date", { ascending: false }).limit(1);
+  const date = latest?.[0]?.trade_date as string | undefined;
+  if (!date) return null;
+  const { data } = await sb
+    .from("daily_investor_flow")
+    .select("ticker, foreign_net_amt, inst_net_amt, indiv_net_amt")
+    .eq("trade_date", date)
+    .limit(5000);
+  const rows = (data ?? []).filter((r) => byTicker.has(r.ticker as string));
+  const top = (key: "foreign_net_amt" | "inst_net_amt"): FlowRow[] =>
+    rows
+      .map((r) => ({ ...byTicker.get(r.ticker as string)!, value: Number(r[key] ?? 0) }))
+      .filter((r) => r.value > 0)
+      .sort((a, b) => b.value - a.value)
+      .slice(0, limit);
+  const sum = (key: string) => rows.reduce((a, r) => a + Number((r as Record<string, unknown>)[key] ?? 0), 0);
+  return {
+    date,
+    foreign: top("foreign_net_amt"),
+    inst: top("inst_net_amt"),
+    total: { foreign: sum("foreign_net_amt"), inst: sum("inst_net_amt"), indiv: sum("indiv_net_amt"), count: rows.length },
+  };
 }

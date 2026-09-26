@@ -304,6 +304,19 @@ def main(argv: list[str]):
 
     print(f"\n완료: 성공 {ok} · 실패 {fail}")
 
+    # 부가 데이터 (실패해도 시세·판정 적재는 유효하므로 배치는 성공으로 둡니다)
+    if ok and not tickers:
+        try:
+            import extras
+            if any(s["market"] in extras.KR_MARKETS for s in symbols):
+                print("투자자별 매매동향 수집(국내)…")
+                extras.collect_investor_flows(symbols)
+            if full:
+                print("업종 빈 곳 채우기…")
+                extras.fill_sectors(symbols, only_missing=True)
+        except Exception as e:  # noqa: BLE001
+            print(f"  [경고] 부가 데이터 수집 실패: {e}")
+
     # 홈 화면 요약 갱신 (실패해도 적재 결과는 유효하므로 배치는 성공으로 둡니다)
     if ok:
         try:

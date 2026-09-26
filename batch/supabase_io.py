@@ -21,7 +21,7 @@ def get_active_symbols() -> list[dict]:
     """대상 종목 목록. batch는 이 테이블을 읽어 수집 대상을 정합니다."""
     url = f"{config.SUPABASE_URL}/rest/v1/symbols"
     params = {
-        "select": "ticker,market,name_ko,name_en,currency,is_active",
+        "select": "ticker,market,name_ko,name_en,currency,is_active,sector",
         "is_active": "eq.true",
         "limit": "10000",  # PostgREST 기본 1000행 캡 회피
     }
