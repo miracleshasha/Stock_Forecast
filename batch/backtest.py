@@ -91,7 +91,7 @@ MIN_PER_DATE = 10  # 횡단면 상관을 낼 최소 종목 수
 
 
 def _score(obs: pd.DataFrame, weights: dict) -> pd.Series:
-    return sum(obs[f"g_{g}"] * weights[g] for g in GROUPS)
+    return sum(obs[f"g_{g}"] * w for g, w in weights.items())
 
 
 def pooled_ic(obs: pd.DataFrame, weights: dict, h: int) -> float:
