@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Icon from "./Icon";
 
-export default function TopBar() {
+export default function TopBar({ who }: { who: string | null }) {
   const path = usePathname();
   const router = useRouter();
   const onStock = path.startsWith("/stock/");
@@ -34,12 +34,16 @@ export default function TopBar() {
           <Link href="/favorites" className={path === "/favorites" ? "on" : undefined}>
             즐겨찾기
           </Link>
+          {who ? (
+            <Link href="/account" className={path === "/account" ? "on" : undefined}>
+              내 정보
+            </Link>
+          ) : (
+            <Link href="/login" className={path === "/login" ? "on" : undefined}>
+              로그인
+            </Link>
+          )}
         </nav>
-        {!onStock && (
-          <Link href="/favorites" className="iconbtn iconbtn--end" aria-label="즐겨찾기">
-            <Icon name="star" />
-          </Link>
-        )}
       </div>
     </header>
   );

@@ -1,0 +1,44 @@
+import { redirect } from "next/navigation";
+import LogoutButton from "@/components/LogoutButton";
+import { emailToPhone, getSessionUser } from "@/lib/auth";
+import { formatPhone } from "@/lib/phone";
+
+export const dynamic = "force-dynamic";
+
+export default async function AccountPage() {
+  const user = await getSessionUser();
+  if (!user) redirect("/login?next=/account");
+
+  const phone = user.user_metadata?.phone
+    ? formatPhone(String(user.user_metadata.phone))
+    : emailToPhone(user.email);
+  const joined = new Date(user.created_at).toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  return (
+    <main className="shell">
+      <div className="page-hd">
+        <h1 className="page-hd__t">내 정보</h1>
+      </div>
+      <section className="card">
+        <div className="kv">
+          <span>휴대폰 번호</span>
+          <span className="num">{phone}</span>
+        </div>
+        <div className="kv">
+          <span>가입일</span>
+          <span>{joined}</span>
+        </div>
+      </section>
+      <section className="card">
+        <p className="sec-desc">
+          즐겨찾기는 아직 이 브라우저에만 저장돼요. 계정 동기화는 다음 단계에서 붙일 예정이에요.
+        </p>
+        <LogoutButton />
+      </section>
+    </main>
+  );
+}

@@ -4,6 +4,7 @@ import Providers from "./providers";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import NavProgress from "@/components/NavProgress";
+import { getDisplayWho } from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: "시그널데스크",
@@ -15,9 +16,10 @@ export const viewport: Viewport = {
   themeColor: "#F2F4F6",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const who = await getDisplayWho();
   return (
     <html lang="ko">
       <head>
@@ -31,9 +33,9 @@ export default function RootLayout({
       <body>
         <Providers>
           <NavProgress>
-            <TopBar />
+            <TopBar who={who} />
             {children}
-            <BottomNav />
+            <BottomNav who={who} />
           </NavProgress>
         </Providers>
       </body>
