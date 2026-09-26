@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { resetFavorites } from "@/lib/favorites";
 import { PASSWORD_MIN, formatPhone, isValidPhone, normalizePhone } from "@/lib/phone";
@@ -8,7 +7,6 @@ import { PASSWORD_MIN, formatPhone, isValidPhone, normalizePhone } from "@/lib/p
 type Mode = "login" | "signup";
 
 export default function AuthForm({ initialMode, next }: { initialMode: Mode; next: string }) {
-  const router = useRouter();
   const [mode, setMode] = useState<Mode>(initialMode);
   const [phone, setPhone] = useState("");
   const [pw, setPw] = useState("");
@@ -32,6 +30,7 @@ export default function AuthForm({ initialMode, next }: { initialMode: Mode; nex
     if (signup && pw !== pw2) return setError("비밀번호가 서로 달라요.");
 
     setBusy(true);
+    let leaving = false;
     try {
       const res = await fetch(`/api/auth/${signup ? "signup" : "login"}`, {
         method: "POST",
@@ -44,12 +43,15 @@ export default function AuthForm({ initialMode, next }: { initialMode: Mode; nex
         return;
       }
       resetFavorites(); // 이제 계정 모드 — 다음 화면에서 브라우저 즐겨찾기를 계정으로 합칩니다
-      router.replace(next);
-      router.refresh();
+      // 전체 새로고침으로 이동합니다. router.replace + router.refresh 를 연달아 쓰면
+      // refresh 가 이동을 덮어써 로그인 화면이 다시 그려지는 경우가 있었습니다(2026-09-27 첫 가입 때).
+      // 새로 받은 로그인 쿠키로 상단 메뉴(레이아웃)까지 확실히 다시 그리려는 목적도 있습니다.
+      leaving = true; // 이동이 끝날 때까지 버튼을 잠가 두 번 가입되는 것을 막습니다
+      window.location.replace(next);
     } catch {
       setError("네트워크 연결을 확인해 주세요.");
     } finally {
-      setBusy(false);
+      if (!leaving) setBusy(false);
     }
   }
 

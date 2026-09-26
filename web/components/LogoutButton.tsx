@@ -1,11 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { resetFavorites } from "@/lib/favorites";
 
 export default function LogoutButton() {
-  const router = useRouter();
   const [busy, setBusy] = useState(false);
 
   async function logout() {
@@ -14,8 +12,7 @@ export default function LogoutButton() {
       await fetch("/api/auth/logout", { method: "POST" });
     } finally {
       resetFavorites();
-      router.replace("/login?mode=login");
-      router.refresh();
+      window.location.replace("/login?mode=login");
     }
   }
 
