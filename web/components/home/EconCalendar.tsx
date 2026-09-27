@@ -28,7 +28,7 @@ export default function EconCalendar({ events }: { events: EconEvent[] }) {
         <ul className="events">
           {events.map((e) => (
             <li className="event" key={`${e.date}-${e.country}-${e.title}`}>
-              <span className={`event__dday num${e.dday <= 1 ? " event__dday--soon" : ""}`}>{ddayLabel(e.dday)}</span>
+              <span className={`event__dday num${e.dday <= 1 ? " event__dday--soon" : e.dday <= 7 ? " event__dday--week" : ""}`}>{ddayLabel(e.dday)}</span>
               <span className="event__main">
                 <span className="event__title">{e.title}</span>
                 <span className="event__meta num">

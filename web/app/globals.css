@@ -3,6 +3,7 @@
    모바일 우선 · 흰 카드 + 회색 바탕 · 테두리 대신 여백
    색상 규약: 상승 = 레드(--up) / 하락 = 블루(--down)
    강조는 파랑이 하락과 겹치므로 먹색(--ink)으로 합니다.
+   예외: 뉴스 화면은 등락·논조·임박도에 레드/블루를 씁니다(의미가 있는 곳에만).
    ============================================================ */
 
 :root {
@@ -496,7 +497,9 @@ button { font-family: inherit; color: inherit; }
   flex: none; min-width: 48px; text-align: center; padding: 6px 0; border-radius: 8px;
   background: var(--soft); color: var(--sub); font-size: 13px; font-weight: 700;
 }
-.event__dday--soon { background: var(--ink); color: #fff; }
+/* 임박도: 오늘·내일 = 레드(주의), 일주일 안 = 옅은 블루 */
+.event__dday--soon { background: var(--up); color: #fff; }
+.event__dday--week { background: var(--down-bg); color: var(--down); }
 .event__main { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .event__title { font-size: 15px; font-weight: 600; word-break: keep-all; }
 .event__meta { font-size: 13px; color: var(--cap); word-break: keep-all; }
@@ -512,3 +515,50 @@ button { font-family: inherit; color: inherit; }
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
 }
 .news__meta { font-size: 12px; color: var(--cap); }
+/* 논조가 있는 기사는 왼쪽에 얇은 색 띠 */
+.news__item--up .news__link, .news__item--down .news__link { padding-left: 12px; border-left: 3px solid; margin-left: -4px; }
+.news__item--up .news__link { border-left-color: var(--up); }
+.news__item--down .news__link { border-left-color: var(--down); }
+.news__tags { display: flex; gap: 6px; }
+.ntag {
+  display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 6px;
+  font-size: 12px; font-weight: 700; line-height: 1;
+}
+.ntag--kr, .ntag--us { background: var(--soft); color: var(--sub); }
+.ntag--up { background: var(--up-bg); color: var(--up); }
+.ntag--down { background: var(--down-bg); color: var(--down); }
+
+/* 헤드라인 분위기 막대 */
+.nmood { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 14px; background: var(--soft); }
+.nmood__lbl { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; font-weight: 700; }
+.nmood__k { font-size: 12px; font-weight: 500; color: var(--cap); }
+.nmood__bar { display: flex; gap: 3px; height: 8px; }
+.nmood__bar > span { border-radius: 4px; min-width: 0; }
+.nmood__up { background: var(--up); }
+.nmood__down { background: var(--down); }
+
+/* ---------- 마감 시황 (뉴스 화면 상단, 어두운 배너) ---------- */
+.brief {
+  --b-up: #FF6B78; --b-down: #6EA8FF;
+  position: relative; overflow: hidden;
+  border-radius: var(--r-card); padding: 20px; color: #fff;
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgba(217, 43, 58, 0.35), transparent 60%),
+    radial-gradient(120% 90% at 100% 100%, rgba(27, 100, 218, 0.45), transparent 60%),
+    #151B2B;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.brief__k { font-size: 15px; font-weight: 700; color: rgba(255, 255, 255, 0.9); }
+.brief__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.brief__item {
+  display: flex; flex-direction: column; gap: 2px; padding: 14px; border-radius: 14px;
+  background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.brief__item--up { color: var(--b-up); }
+.brief__item--down { color: var(--b-down); }
+.brief__item--neu { color: rgba(255, 255, 255, 0.7); }
+.brief__name { font-size: 13px; color: rgba(255, 255, 255, 0.7); }
+.brief__v { font-size: 22px; font-weight: 700; color: #fff; letter-spacing: -0.02em; }
+.brief__c { font-size: 14px; font-weight: 700; }
+.brief__spark { display: block; margin: 6px 0 2px; }
+.brief__d { font-size: 11px; color: rgba(255, 255, 255, 0.5); }

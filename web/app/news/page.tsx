@@ -1,7 +1,8 @@
+import MarketBrief from "@/components/MarketBrief";
 import NewsCard from "@/components/NewsCard";
 import SetupNotice from "@/components/SetupNotice";
 import EconCalendar from "@/components/home/EconCalendar";
-import { getUpcomingEvents } from "@/lib/home";
+import { getMarketTemps, getUpcomingEvents } from "@/lib/home";
 import { getMarketNews } from "@/lib/news";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
@@ -16,15 +17,20 @@ export default async function NewsPage() {
     );
   }
 
-  const [news, events] = await Promise.all([getMarketNews(10), getUpcomingEvents(8).catch(() => [])]);
+  const [news, events, temps] = await Promise.all([
+    getMarketNews(10),
+    getUpcomingEvents(8).catch(() => []),
+    getMarketTemps().catch(() => []),
+  ]);
 
   return (
     <main className="shell">
       <div className="page-hd">
         <h1 className="page-hd__t">뉴스</h1>
       </div>
+      <MarketBrief temps={temps} />
       {news.length > 0 ? (
-        <NewsCard title="시장 뉴스" items={news} />
+        <NewsCard title="시장 뉴스" items={news} mood />
       ) : (
         <section className="card" aria-label="시장 뉴스">
           <h2 className="sec-title">시장 뉴스</h2>

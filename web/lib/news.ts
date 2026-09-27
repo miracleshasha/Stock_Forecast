@@ -15,6 +15,8 @@ export interface NewsItem {
   /** 언론사 도메인(예: hankyung.com) */
   source: string;
   publishedAt: string; // ISO
+  /** 시장 뉴스에서 어느 검색어로 나온 기사인지 */
+  market?: "KR" | "US";
 }
 
 const ENTITIES: Record<string, string> = { "&quot;": '"', "&amp;": "&", "&lt;": "<", "&gt;": ">", "&apos;": "'", "&#39;": "'", "&nbsp;": " " };
@@ -109,7 +111,8 @@ export async function getStockNews(name: string, limit = 5): Promise<NewsItem[]>
 export async function getMarketNews(limit = 5): Promise<NewsItem[]> {
   try {
     const [kr, us] = await Promise.all([cachedNews("코스피 마감", 10), cachedNews("뉴욕증시 마감", 10)]);
-    return dedupe([...kr, ...us])
+    const tag = (items: NewsItem[], market: "KR" | "US") => items.map((n) => ({ ...n, market }));
+    return dedupe([...tag(kr, "KR"), ...tag(us, "US")])
       .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
       .slice(0, limit);
   } catch (e) {
