@@ -7,6 +7,7 @@
 
 import "server-only";
 import { unstable_cache } from "next/cache";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSupabase } from "./supabase";
 import type { Currency, Market, Zone } from "./types";
 
@@ -91,21 +92,51 @@ const num = (v: unknown): number | null => {
   return Number.isFinite(n) ? n : null;
 };
 
+// 이 화면의 수치는 배치(하루 두 번)가 갱신하므로 DB 원본 행을 5분 캐시합니다.
+// 가공 결과(Map 포함)가 아니라 조회 결과만 캐시해 직렬화 문제를 피합니다. 오류는 던져서 캐시에 남기지 않습니다.
+const DB_TTL = 300;
+function cachedQuery<A extends unknown[], T>(key: string, fn: (sb: SupabaseClient, ...a: A) => PromiseLike<{ data: T | null; error: unknown }>) {
+  return unstable_cache(
+    async (...a: A): Promise<T | null> => {
+      const sb = getSupabase();
+      if (!sb) return null;
+      const { data, error } = await fn(sb, ...a);
+      if (error) throw error;
+      return data;
+    },
+    [key],
+    { revalidate: DB_TTL, tags: ["home"] },
+  );
+}
+
+const qHomeStats = cachedQuery("home-stats-v1", (sb) => sb.from("mv_home_stats").select("*").limit(5000));
+const qHomeSymbols = cachedQuery("home-symbols-v1", (sb) =>
+  sb.from("symbols").select("ticker, name_ko, name_en, currency, sector").limit(5000));
+const qKospi = cachedQuery("home-kospi-v1", (sb) =>
+  sb.from("daily_macro").select("trade_date, kospi_close").not("kospi_close", "is", null)
+    .order("trade_date", { ascending: false }).limit(30));
+const qFlowLatest = cachedQuery("home-flow-date-v1", (sb) =>
+  sb.from("daily_investor_flow").select("trade_date").order("trade_date", { ascending: false }).limit(1));
+const qFlows = cachedQuery("home-flows-v1", (sb, date: string) =>
+  sb.from("daily_investor_flow").select("ticker, foreign_net_amt, inst_net_amt, indiv_net_amt").eq("trade_date", date).limit(5000));
+const qEvents = cachedQuery("home-events-v1", (sb, from: string, n: number) =>
+  sb.from("econ_events")
+    .select("event_date, event_time_kst, country, title, category, detail, source_url")
+    .gte("event_date", from)
+    .order("event_date", { ascending: true })
+    .order("event_time_kst", { ascending: true, nullsFirst: true })
+    .limit(n));
+
 const upZone = (z: Zone | null) => z === "BUY" || z === "BUY_LEAN";
 const downZone = (z: Zone | null) => z === "SELL" || z === "SELL_LEAN";
 
 export async function getHomeData(limit = 5): Promise<HomeData | null> {
-  const sb = getSupabase();
-  if (!sb) return null;
+  if (!getSupabase()) return null;
 
-  const [statRes, symRes] = await Promise.all([
-    sb.from("mv_home_stats").select("*").limit(5000),
-    sb.from("symbols").select("ticker, name_ko, name_en, currency, sector").limit(5000),
-  ]);
-  if (statRes.error) throw statRes.error;
-  const names = new Map((symRes.data ?? []).map((r) => [r.ticker as string, r]));
+  const [statRows, symRows] = await Promise.all([qHomeStats(), qHomeSymbols().catch(() => null)]);
+  const names = new Map((symRows ?? []).map((r) => [r.ticker as string, r]));
 
-  const stats: Stat[] = (statRes.data ?? []).map((r) => ({
+  const stats: Stat[] = (statRows ?? []).map((r) => ({
     ...(r as Stat),
     close: num(r.close),
     high: num(r.high),
@@ -295,15 +326,11 @@ function toTemp(
 }
 
 export async function getMarketTemps(): Promise<Temp[]> {
-  const sb = getSupabase();
-  const [fred, kospiRes] = await Promise.all([
+  const [fred, kospiRows] = await Promise.all([
     getFred().catch(() => ({}) as Record<string, { date: string; value: number }[]>),
-    sb
-      ? sb.from("daily_macro").select("trade_date, kospi_close").not("kospi_close", "is", null)
-          .order("trade_date", { ascending: false }).limit(30)
-      : Promise.resolve({ data: [] as { trade_date: string; kospi_close: number }[] }),
+    qKospi().catch(() => null),
   ]);
-  const kospi = [...(kospiRes.data ?? [])]
+  const kospi = [...(kospiRows ?? [])]
     .reverse()
     .map((r) => ({ date: r.trade_date as string, value: Number(r.kospi_close) }));
 
@@ -337,17 +364,10 @@ export interface InvestorFlows {
 }
 
 export async function getInvestorFlows(byTicker: Map<string, HomeRow>, limit = 5): Promise<InvestorFlows | null> {
-  const sb = getSupabase();
-  if (!sb) return null;
-  const { data: latest } = await sb
-    .from("daily_investor_flow").select("trade_date").order("trade_date", { ascending: false }).limit(1);
+  const latest = await qFlowLatest();
   const date = latest?.[0]?.trade_date as string | undefined;
   if (!date) return null;
-  const { data } = await sb
-    .from("daily_investor_flow")
-    .select("ticker, foreign_net_amt, inst_net_amt, indiv_net_amt")
-    .eq("trade_date", date)
-    .limit(5000);
+  const data = await qFlows(date);
   const rows = (data ?? []).filter((r) => byTicker.has(r.ticker as string));
   const top = (key: "foreign_net_amt" | "inst_net_amt"): FlowRow[] =>
     rows
@@ -388,16 +408,8 @@ function nowKst(): { date: string; time: string } {
 }
 
 export async function getUpcomingEvents(limit = 5): Promise<EconEvent[]> {
-  const sb = getSupabase();
-  if (!sb) return [];
   const now = nowKst();
-  const { data } = await sb
-    .from("econ_events")
-    .select("event_date, event_time_kst, country, title, category, detail, source_url")
-    .gte("event_date", now.date)
-    .order("event_date", { ascending: true })
-    .order("event_time_kst", { ascending: true, nullsFirst: true })
-    .limit(limit + 3);
+  const data = await qEvents(now.date, limit + 3);
   const today = Date.parse(`${now.date}T00:00:00Z`);
   return (data ?? [])
     .map((r) => ({
