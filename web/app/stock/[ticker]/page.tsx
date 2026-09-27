@@ -6,8 +6,10 @@ import IndicatorPanel from "@/components/IndicatorPanel";
 import ExtrasCard from "@/components/ExtrasCard";
 import SetupNotice from "@/components/SetupNotice";
 import Icon from "@/components/Icon";
+import NewsCard from "@/components/NewsCard";
 import { getIndicators, getMacro, getStock, getStockExtras } from "@/lib/db";
 import { formatDateKo } from "@/lib/format";
+import { getStockNews } from "@/lib/news";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -30,10 +32,12 @@ export default async function StockPage({
   const stock = await getStock(ticker);
   if (!stock) notFound();
 
-  const [indicators, macro, extras] = await Promise.all([
+  const newsName = stock.symbol.nameKo || stock.symbol.nameEn || stock.symbol.ticker;
+  const [indicators, macro, extras, news] = await Promise.all([
     getIndicators(ticker),
     getMacro(),
     getStockExtras(stock.symbol.ticker, stock.symbol.market),
+    getStockNews(newsName, 5),
   ]);
   const hasSignal = stock.signal && stock.signal.zone !== "UNAVAILABLE";
 
@@ -68,6 +72,8 @@ export default async function StockPage({
         damp={stock.signal?.breakdown.damp}
         currency={stock.symbol.currency}
       />
+
+      <NewsCard title="관련 뉴스" items={news} />
 
       <p className="disc">
         <Icon name="info" size={16} />

@@ -501,3 +501,14 @@ button { font-family: inherit; color: inherit; }
 .event__title { font-size: 15px; font-weight: 600; word-break: keep-all; }
 .event__meta { font-size: 13px; color: var(--cap); word-break: keep-all; }
 .event__src { flex: none; font-size: 12px; color: var(--cap); text-decoration: underline; min-height: 44px; display: inline-flex; align-items: center; }
+
+/* ---------- 뉴스 ---------- */
+.news { list-style: none; display: flex; flex-direction: column; }
+.news__item + .news__item { border-top: 1px solid var(--line); }
+.news__link { display: flex; flex-direction: column; gap: 4px; padding: 12px 0; min-height: 44px; }
+.news__link:hover .news__title { text-decoration: underline; }
+.news__title {
+  font-size: 15px; font-weight: 600; line-height: 1.45; word-break: keep-all; overflow-wrap: break-word;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+}
+.news__meta { font-size: 12px; color: var(--cap); }
