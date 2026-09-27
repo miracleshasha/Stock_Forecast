@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import AuthForm from "@/components/AuthForm";
+import BrandMark from "@/components/BrandMark";
 import { getSessionUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +22,12 @@ export default async function LoginPage({
   return (
     <main className="shell">
       <div className="intro">
+        <div className="intro__brand" aria-label="시그널데스크">
+          <BrandMark size={56} />
+          <span className="intro__name" aria-hidden>
+            <span className="brand__sig">시그널</span>데스크
+          </span>
+        </div>
         <p className="intro__t">
           종목을 검색하면
           <br />

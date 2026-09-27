@@ -9,6 +9,7 @@ export default function TopBar({ who }: { who: string | null }) {
   const path = usePathname();
   const router = useRouter();
   const onStock = path.startsWith("/stock/");
+  if (path === "/login") return null; // 로그인 화면은 본문에 큰 로고가 있음
 
   return (
     <header className="topbar">
@@ -31,28 +32,26 @@ export default function TopBar({ who }: { who: string | null }) {
             </span>
           </Link>
         )}
-        {path !== "/login" && (
-          <nav className="topnav" aria-label="주요 메뉴">
-            <Link href="/" className={path === "/" ? "on" : undefined}>
-              홈
+        <nav className="topnav" aria-label="주요 메뉴">
+          <Link href="/" className={path === "/" ? "on" : undefined}>
+            홈
+          </Link>
+          <Link href="/news" className={path === "/news" ? "on" : undefined}>
+            뉴스
+          </Link>
+          <Link href="/favorites" className={path === "/favorites" ? "on" : undefined}>
+            즐겨찾기
+          </Link>
+          {who ? (
+            <Link href="/account" className={path === "/account" ? "on" : undefined}>
+              내 정보
             </Link>
-            <Link href="/news" className={path === "/news" ? "on" : undefined}>
-              뉴스
+          ) : (
+            <Link href="/login" className={path === "/login" ? "on" : undefined}>
+              로그인
             </Link>
-            <Link href="/favorites" className={path === "/favorites" ? "on" : undefined}>
-              즐겨찾기
-            </Link>
-            {who ? (
-              <Link href="/account" className={path === "/account" ? "on" : undefined}>
-                내 정보
-              </Link>
-            ) : (
-              <Link href="/login" className={path === "/login" ? "on" : undefined}>
-                로그인
-              </Link>
-            )}
-          </nav>
-        )}
+          )}
+        </nav>
       </div>
     </header>
   );

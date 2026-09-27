@@ -443,6 +443,9 @@ button { font-family: inherit; color: inherit; }
   font-size: inherit; font-weight: 600; color: var(--ink); text-decoration: underline;
 }
 .intro { padding: 20px 4px 4px; display: flex; flex-direction: column; gap: 8px; }
+.intro__brand { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.intro__brand .brand__mark { border-radius: 16px; box-shadow: 0 8px 20px rgba(25, 31, 40, 0.18); }
+.intro__name { font-size: 26px; font-weight: 800; letter-spacing: -0.04em; }
 .intro__t { font-size: 24px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.4; }
 
 /* ---------- 검색 시트 (모바일 하단 탭) ---------- */
