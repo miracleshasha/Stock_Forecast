@@ -73,18 +73,36 @@ interface Quote {
   asOf: string | null;
 }
 
-/** v_latest_quote 뷰에서 최신 시세 + 등락 조회 */
+/**
+ * 최신 시세 + 등락. 먼저 mv_home_stats 캐시(5분)에서 찾고, 없는 종목만 v_latest_quote 뷰로 조회합니다.
+ * (뷰는 종목마다 전 기간을 읽어서 여러 종목을 물으면 DB에서만 0.5초 넘게 걸렸음)
+ */
 export async function getLatestQuotes(
   tickers: string[],
 ): Promise<Map<string, Quote>> {
   const map = new Map<string, Quote>();
+  if (tickers.length === 0) return map;
+
+  const want = new Set(tickers);
+  for (const r of await getHomeStatRows().catch(() => [])) {
+    if (!want.has(r.ticker as string)) continue;
+    const close = numOrNull(r.close);
+    const prev = numOrNull(r.prev_close);
+    map.set(r.ticker as string, {
+      close,
+      change: close != null && prev != null ? close - prev : null,
+      changePct: close != null && prev ? (close / prev - 1) * 100 : null,
+      asOf: (r.trade_date as string) ?? null,
+    });
+  }
+  const missing = tickers.filter((t) => !map.has(t));
   const sb = getSupabase();
-  if (!sb || tickers.length === 0) return map;
+  if (!sb || missing.length === 0) return map;
 
   const { data } = await sb
     .from("v_latest_quote")
     .select("ticker, trade_date, close, change, change_pct")
-    .in("ticker", tickers);
+    .in("ticker", missing);
 
   for (const r of data ?? []) {
     map.set(r.ticker as string, {
@@ -417,13 +435,19 @@ async function latestSignals(
   tickers: string[],
 ): Promise<Map<string, { score: number; zone: Zone }>> {
   const map = new Map<string, { score: number; zone: Zone }>();
+  // mv_home_stats 캐시에 있는 최신 판정을 먼저 쓰고, 없는 종목만 v_latest_signal 뷰로
+  const want = new Set(tickers);
+  for (const r of await getHomeStatRows().catch(() => [])) {
+    if (!want.has(r.ticker as string) || r.score == null || !r.zone) continue;
+    map.set(r.ticker as string, { score: Number(r.score), zone: r.zone as Zone });
+  }
+  const missing = tickers.filter((t) => !map.has(t));
   const sb = getSupabase();
-  if (!sb) return map;
-  // v_latest_signal 뷰: ticker별 최신 시그널 1건
+  if (!sb || missing.length === 0) return map;
   const { data } = await sb
     .from("v_latest_signal")
     .select("ticker, score, zone")
-    .in("ticker", tickers);
+    .in("ticker", missing);
   for (const r of data ?? []) {
     map.set(r.ticker as string, { score: Number(r.score), zone: r.zone as Zone });
   }
