@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSessionUserId } from "@/lib/auth";
+import { getFavoriteRows } from "@/lib/db";
 import { FAVORITES_MAX, addFavorite, listFavorites, removeFavorite } from "@/lib/userFavorites";
 import type { Market } from "@/lib/types";
 
@@ -7,10 +8,14 @@ export const dynamic = "force-dynamic";
 
 const unauthorized = () => NextResponse.json({ message: "로그인이 필요해요." }, { status: 401 });
 
-export async function GET() {
+/** 목록. ?with=rows 면 즐겨찾기 화면용 시세·판정까지 함께 돌려줍니다({ items, rows }) — 요청 한 번으로 끝내려고 */
+export async function GET(req: Request) {
   const userId = await getSessionUserId();
   if (!userId) return unauthorized();
-  return NextResponse.json(await listFavorites(userId));
+  const items = await listFavorites(userId);
+  if (new URL(req.url).searchParams.get("with") !== "rows") return NextResponse.json(items);
+  const rows = await getFavoriteRows(items.map((f) => f.ticker));
+  return NextResponse.json({ items, rows });
 }
 
 /** { ticker, market } 추가 */

@@ -12,8 +12,9 @@ import {
   FAVORITES_MAX,
   favoritesInAccount,
   getFavorites,
-  loadFavorites,
+  loadFavoritesWithRows,
   removeFavorite,
+  takePrefetchedRows,
 } from "@/lib/favorites";
 import type { FavoriteRow } from "@/lib/db";
 
@@ -41,7 +42,7 @@ export default function FavoritesPage() {
       setInAccount(favoritesInAccount());
     };
     window.addEventListener(FAVORITES_EVENT, sync);
-    loadFavorites().then(() => {
+    loadFavoritesWithRows().then(() => {
       sync();
       setReady(true);
     });
@@ -51,6 +52,13 @@ export default function FavoritesPage() {
   useEffect(() => {
     if (tickers.length === 0) {
       setRows([]);
+      setLoading(false);
+      return;
+    }
+    // 로그인 상태면 목록을 받을 때 시세도 같이 받아 둠 → 두 번째 요청 없이 바로 표시
+    const ready = takePrefetchedRows(tickers);
+    if (ready) {
+      setRows(ready);
       setLoading(false);
       return;
     }

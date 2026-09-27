@@ -9,6 +9,7 @@
 
 "use client";
 
+import type { FavoriteRow } from "./db";
 import type { FavoriteItem, Market } from "./types";
 
 const KEY = "sd.favorites";
@@ -111,9 +112,47 @@ export function loadFavorites(): Promise<FavoriteItem[]> {
   return loading;
 }
 
+/** loadFavoritesWithRows 가 목록과 함께 받아 둔 시세. 목록이 그대로일 때 한 번만 꺼내 씁니다. */
+let prefetched: { key: string; rows: FavoriteRow[] } | null = null;
+
+/**
+ * 즐겨찾기 화면용: 계정 목록과 시세·판정을 요청 한 번에 받습니다.
+ * 브라우저 즐겨찾기를 계정으로 합쳐야 하거나 이미 불러온 경우엔 loadFavorites 와 같고,
+ * 시세는 화면이 따로 받습니다.
+ */
+export function loadFavoritesWithRows(): Promise<FavoriteItem[]> {
+  if (!accountMode() || remote || loading || readLocal().length) return loadFavorites();
+  loading = fetch("/api/me/favorites?with=rows", { cache: "no-store" })
+    .then(async (res) => {
+      if (!res.ok) throw new Error(String(res.status));
+      const { items, rows } = (await res.json()) as { items: FavoriteItem[]; rows: FavoriteRow[] };
+      prefetched = { key: items.map((f) => f.ticker).join(","), rows };
+      remote = items;
+      notify();
+      return items;
+    })
+    .catch(() => {
+      remoteBroken = true;
+      notify();
+      return readLocal();
+    })
+    .finally(() => {
+      loading = null;
+    });
+  return loading;
+}
+
+/** 같은 목록으로 받아 둔 시세가 있으면 돌려주고 비웁니다 */
+export function takePrefetchedRows(tickers: string[]): FavoriteRow[] | null {
+  const hit = prefetched && prefetched.key === tickers.join(",") ? prefetched.rows : null;
+  prefetched = null;
+  return hit;
+}
+
 /** 로그인·로그아웃 직후 캐시를 버립니다. */
 export function resetFavorites() {
   remote = null;
+  prefetched = null;
   loading = null;
   remoteBroken = false;
   if (typeof window !== "undefined") notify();
