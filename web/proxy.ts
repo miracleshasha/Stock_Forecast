@@ -70,5 +70,5 @@ export async function proxy(req: NextRequest) {
 
 export const config = {
   // 정적 파일만 제외하고 전부(페이지 + 데이터 API) 게이트를 거칩니다
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg).*)"],
 };
