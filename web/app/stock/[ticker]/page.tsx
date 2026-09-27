@@ -29,13 +29,16 @@ export default async function StockPage({
     );
   }
 
+  // 종목명·시장이 필요 없는 조회는 getStock 과 함께 먼저 시작합니다
+  const indicatorsP = getIndicators(ticker);
+  const macroP = getMacro();
   const stock = await getStock(ticker);
   if (!stock) notFound();
 
   const newsName = stock.symbol.nameKo || stock.symbol.nameEn || stock.symbol.ticker;
   const [indicators, macro, extras, news] = await Promise.all([
-    getIndicators(ticker),
-    getMacro(),
+    indicatorsP,
+    macroP,
     getStockExtras(stock.symbol.ticker, stock.symbol.market),
     getStockNews(newsName, 5),
   ]);

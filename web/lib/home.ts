@@ -127,6 +127,11 @@ const qEvents = cachedQuery("home-events-v1", (sb, from: string, n: number) =>
     .order("event_time_kst", { ascending: true, nullsFirst: true })
     .limit(n));
 
+/** 종목 화면(52주 범위·12개월 순위)도 같은 캐시를 씁니다 */
+export async function getHomeStatRows() {
+  return (await qHomeStats()) ?? [];
+}
+
 const upZone = (z: Zone | null) => z === "BUY" || z === "BUY_LEAN";
 const downZone = (z: Zone | null) => z === "SELL" || z === "SELL_LEAN";
 

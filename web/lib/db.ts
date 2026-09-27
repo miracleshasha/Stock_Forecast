@@ -3,6 +3,8 @@
 // 요청 시점에 계산하지 않는다. 배치가 채워둔 테이블에서 SELECT만.
 // ============================================================
 
+import { unstable_cache } from "next/cache";
+import { getHomeStatRows } from "./home";
 import { getSupabase } from "./supabase";
 import type {
   ChartRange,
@@ -111,10 +113,9 @@ export async function getStock(ticker: string): Promise<StockResponse | null> {
   const sb = getSupabase();
   if (!sb) return null;
 
-  const symbol = await getSymbol(ticker);
-  if (!symbol) return null;
-
-  const [quotes, signalRow] = await Promise.all([
+  // 셋 다 ticker 만 있으면 되므로 한 번에 조회합니다(DB 왕복 2단계 → 1단계)
+  const [symbol, quotes, signalRow] = await Promise.all([
+    getSymbol(ticker),
     getLatestQuotes([ticker]),
     sb
       .from("daily_signals")
@@ -124,6 +125,7 @@ export async function getStock(ticker: string): Promise<StockResponse | null> {
       .limit(1)
       .maybeSingle(),
   ]);
+  if (!symbol) return null;
 
   const qt = quotes.get(ticker);
   const price = qt?.close != null
@@ -201,15 +203,26 @@ export async function getIndicators(ticker: string): Promise<Indicators | null> 
 }
 
 // ---------- 매크로 (S-05 / 홈) ----------
+// 배치가 하루 두 번 갱신하는 값이라 5분 캐시합니다
+const qLatestMacro = unstable_cache(
+  async () => {
+    const sb = getSupabase();
+    if (!sb) return null;
+    const { data, error } = await sb
+      .from("daily_macro")
+      .select("*")
+      .order("trade_date", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    return data;
+  },
+  ["latest-macro-v1"],
+  { revalidate: 300, tags: ["home"] },
+);
+
 export async function getMacro(): Promise<Macro | null> {
-  const sb = getSupabase();
-  if (!sb) return null;
-  const { data } = await sb
-    .from("daily_macro")
-    .select("*")
-    .order("trade_date", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const data = await qLatestMacro().catch(() => null);
   if (!data) return null;
   return {
     vix: numOrNull(data.vix),
@@ -226,7 +239,14 @@ export async function getMacro(): Promise<Macro | null> {
 // ---------- 차트 (S-04) ----------
 const RANGE_DAYS: Record<ChartRange, number> = { "1M": 31, "3M": 92, "6M": 183, "1Y": 366, "3Y": 1096 };
 
-export async function getChart(
+/** 일봉·지표는 배치 때만 바뀌므로 종목·기간별로 5분 캐시합니다 */
+export const getChart = unstable_cache(
+  (ticker: string, range: ChartRange) => loadChart(ticker, range),
+  ["chart-v1"],
+  { revalidate: 300, tags: ["home"] },
+);
+
+async function loadChart(
   ticker: string,
   range: ChartRange,
 ): Promise<ChartSeries> {
@@ -359,45 +379,32 @@ export interface StockExtras {
 export async function getStockExtras(ticker: string, market: Market): Promise<StockExtras> {
   const region = regionOf(market);
   const out: StockExtras = { high52: null, low52: null, mom12: null, mom12Rank: null, peers: 0, region };
-  const sb = getSupabase();
-  if (!sb) return out;
+  // 홈과 같은 mv_home_stats 캐시(5분)를 씁니다 — 요청마다 전 종목 종가를 두 번 읽던 조회를 없앰
+  const rows = await getHomeStatRows().catch(() => []);
+  const n = (v: unknown) => (v == null || !Number.isFinite(Number(v)) ? null : Number(v));
+  const me = rows.find((r) => r.ticker === ticker);
+  if (!me) return out;
 
-  const { data: rows } = await sb
-    .from("daily_prices")
-    .select("trade_date, high, low, close")
-    .eq("ticker", ticker)
-    .order("trade_date", { ascending: false })
-    .limit(253);
-  if (!rows || rows.length === 0) return out;
+  // mv 의 hi52/lo52 는 최신 거래일을 뺀 1년이라 그날 고가·저가를 더합니다
+  const hs = [n(me.hi52), n(me.high)].filter((v): v is number => v != null);
+  const ls = [n(me.lo52), n(me.low)].filter((v): v is number => v != null);
+  out.high52 = hs.length ? Math.max(...hs) : null;
+  out.low52 = ls.length ? Math.min(...ls) : null;
 
-  const year = rows.slice(0, 252);
-  out.high52 = Math.max(...year.map((r) => Number(r.high)));
-  out.low52 = Math.min(...year.map((r) => Number(r.low)));
-  if (rows.length < 253) return out;
+  const mom = (r: Record<string, unknown>) => {
+    const c21 = n(r.close_21), c252 = n(r.close_252);
+    return c21 && c252 ? c21 / c252 - 1 : null;
+  };
+  const mine = mom(me);
+  if (mine == null) return out;
+  out.mom12 = mine * 100;
 
-  const dRecent = rows[21].trade_date as string;
-  const dOld = rows[252].trade_date as string;
-  out.mom12 = (Number(rows[21].close) / Number(rows[252].close) - 1) * 100;
-
-  // 같은 두 날짜의 전 종목 종가 → 같은 시장 안 순위
-  const [recentRes, oldRes, symRes] = await Promise.all([
-    sb.from("daily_prices").select("ticker, close").eq("trade_date", dRecent).limit(5000),
-    sb.from("daily_prices").select("ticker, close").eq("trade_date", dOld).limit(5000),
-    sb.from("symbols").select("ticker, market").eq("is_active", true).limit(5000),
-  ]);
-  const inRegion = new Set(
-    (symRes.data ?? []).filter((r) => regionOf(r.market as string) === region).map((r) => r.ticker as string),
-  );
-  const old = new Map((oldRes.data ?? []).map((r) => [r.ticker as string, Number(r.close)]));
-  const rets: number[] = [];
-  for (const r of recentRes.data ?? []) {
-    const t = r.ticker as string;
-    const o = old.get(t);
-    if (!inRegion.has(t) || !o) continue;
-    rets.push(Number(r.close) / o - 1);
-  }
+  // 같은 시장 안 순위
+  const rets = rows
+    .filter((r) => regionOf(r.market as string) === region)
+    .map(mom)
+    .filter((v): v is number => v != null);
   if (rets.length >= 10) {
-    const mine = out.mom12 / 100;
     const below = rets.filter((v) => v < mine).length;
     const equal = rets.filter((v) => v === mine).length;
     out.mom12Rank = (below + equal / 2) / rets.length;
