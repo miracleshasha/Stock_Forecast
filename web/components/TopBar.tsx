@@ -32,6 +32,9 @@ export default function TopBar({ who }: { who: string | null }) {
             <Link href="/" className={path === "/" ? "on" : undefined}>
               홈
             </Link>
+            <Link href="/news" className={path === "/news" ? "on" : undefined}>
+              뉴스
+            </Link>
             <Link href="/favorites" className={path === "/favorites" ? "on" : undefined}>
               즐겨찾기
             </Link>
