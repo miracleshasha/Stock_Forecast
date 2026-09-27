@@ -23,7 +23,9 @@ export default function BottomNav({ who }: { who: string | null }) {
     const on = it.match(path);
     return (
       <Link key={it.label} href={it.href} className={on ? "on" : undefined} aria-current={on ? "page" : undefined}>
-        <Icon name={it.icon} />
+        <span className="bottomnav__ic">
+          <Icon name={it.icon} strokeWidth={on ? 2.4 : 2} />
+        </span>
         <span>{it.label}</span>
       </Link>
     );

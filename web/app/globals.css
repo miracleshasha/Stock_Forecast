@@ -21,6 +21,8 @@
   --down: #1B64DA;    /* 하락 = 블루 */
   --up-bg: #FDECEE;
   --down-bg: #E8F0FC;
+  --brand: #1B64DA;   /* 탭·로고 강조. 하락 블루와 같은 톤이라 숫자 옆에는 쓰지 않음 */
+  --brand-bg: #E8F0FC;
 
   --sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
     system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
@@ -76,14 +78,16 @@ button { font-family: inherit; color: inherit; }
   max-width: var(--maxw); margin: 0 auto; height: 56px; padding: 0 8px 0 20px;
   display: flex; align-items: center; gap: 8px;
 }
-.brand { font-size: 19px; font-weight: 700; letter-spacing: -0.03em; }
+.brand { display: inline-flex; align-items: center; gap: 8px; font-size: 19px; font-weight: 800; letter-spacing: -0.04em; }
+.brand__mark { flex: none; display: block; }
+.brand__sig { color: var(--brand); }
 .topnav { margin-left: auto; display: none; gap: 4px; }
 .topnav a {
   font-size: 15px; font-weight: 500; color: var(--cap);
   padding: 8px 12px; border-radius: 10px;
 }
 .topnav a:hover { background: rgba(0, 0, 0, .04); color: var(--ink); }
-.topnav a.on { color: var(--ink); font-weight: 600; }
+.topnav a.on { color: var(--brand); background: var(--brand-bg); font-weight: 700; }
 .iconbtn {
   width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center;
   border: 0; background: transparent; border-radius: 12px; cursor: pointer; color: var(--ink); flex: none;
@@ -107,7 +111,14 @@ button { font-family: inherit; color: inherit; }
   align-items: center; justify-content: center; gap: 2px;
   font-size: 12px; font-weight: 500; color: var(--faint);
 }
-.bottomnav a.on, .bottomnav button.on { color: var(--ink); font-weight: 600; }
+.bottomnav__ic {
+  display: grid; place-items: center; width: 52px; height: 30px; border-radius: 15px;
+  transition: background-color .15s ease, transform .15s ease;
+}
+.bottomnav a.on, .bottomnav button.on { color: var(--brand); font-weight: 700; }
+.bottomnav a.on .bottomnav__ic { background: var(--brand-bg); }
+.bottomnav a:active .bottomnav__ic { transform: scale(.94); }
+@media (prefers-reduced-motion: reduce) { .bottomnav__ic { transition: none; } }
 
 @media (min-width: 768px) {
   .topnav { display: flex; }

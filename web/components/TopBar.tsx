@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import BrandMark from "./BrandMark";
 import Icon from "./Icon";
 
 export default function TopBar({ who }: { who: string | null }) {
@@ -23,8 +24,11 @@ export default function TopBar({ who }: { who: string | null }) {
             <Icon name="back" />
           </button>
         ) : (
-          <Link href="/" className="brand">
-            시그널데스크
+          <Link href="/" className="brand" aria-label="시그널데스크 홈">
+            <BrandMark />
+            <span aria-hidden>
+              <span className="brand__sig">시그널</span>데스크
+            </span>
           </Link>
         )}
         {path !== "/login" && (
