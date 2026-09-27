@@ -21,6 +21,9 @@ from us_ko_names import US_KO_NAMES
 
 SP500_CSV = "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/main/data/constituents.csv"
 
+# 유니버스에서 뺀 종목. KIS 시세가 끊겨(2026-09-18 이후 "시세 없음") 매 배치 실패하던 티커.
+EXCLUDED = {"AVB", "EQR"}
+
 # KR 대표주 (티커, 시장, 한글명). 확신 있는 종목 위주. 무효 티커는 배치 후 정리됨.
 KR_EXTRA = [
     # KOSPI
@@ -98,6 +101,8 @@ def _sp500() -> list[dict]:
         sym = (r.get("Symbol") or "").strip()
         name = (r.get("Security") or "").strip()
         if not sym or "." in sym:  # 점 포함 티커(BRK.B 등)는 KIS 호환 이슈로 제외
+            continue
+        if sym in EXCLUDED:
             continue
         rows.append({
             "ticker": sym, "market": "NASDAQ", "name_ko": US_KO_NAMES.get(sym), "name_en": name,
