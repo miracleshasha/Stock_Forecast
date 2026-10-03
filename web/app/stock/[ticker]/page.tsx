@@ -9,6 +9,7 @@ import Icon from "@/components/Icon";
 import NewsCard from "@/components/NewsCard";
 import { getIndicators, getMacro, getStock, getStockExtras } from "@/lib/db";
 import { formatDateKo } from "@/lib/format";
+import { getInitialQuote } from "@/lib/liveQuote";
 import { getStockNews } from "@/lib/news";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
@@ -36,11 +37,13 @@ export default async function StockPage({
   if (!stock) notFound();
 
   const newsName = stock.symbol.nameKo || stock.symbol.nameEn || stock.symbol.ticker;
-  const [indicators, macro, extras, news] = await Promise.all([
+  const [indicators, macro, extras, news, initialQuote] = await Promise.all([
     indicatorsP,
     macroP,
     getStockExtras(stock.symbol.ticker, stock.symbol.market),
     getStockNews(newsName, 5),
+    // 장중이면 현재가를 먼저 받아 첫 화면부터 실시간 값으로 보여줍니다(장 마감이면 조회 안 함)
+    getInitialQuote(stock.symbol, stock.price?.close ?? null),
   ]);
   const hasSignal = stock.signal && stock.signal.zone !== "UNAVAILABLE";
 
@@ -48,7 +51,7 @@ export default async function StockPage({
     <main className="shell">
       {/* 가격 · 차트 */}
       <section className="card stock-top" aria-label="가격">
-        <StockHeader symbol={stock.symbol} price={stock.price} />
+        <StockHeader symbol={stock.symbol} price={stock.price} initialQuote={initialQuote} />
         <PriceChart ticker={stock.symbol.ticker} currency={stock.symbol.currency} />
       </section>
 

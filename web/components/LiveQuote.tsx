@@ -2,6 +2,8 @@
 
 // ============================================================
 // 상단 현재가. 장중이면 실시간 값으로 갱신하고, 그 외에는 확정 종가를 씁니다.
+// 서버가 첫 렌더 때 현재가를 받아 왔으면(initial) 그 값으로 바로 시작하고,
+// 다음 갱신은 1분 뒤부터 합니다. 못 받아 왔으면 화면이 뜨자마자 받아옵니다.
 // 판정 점수·지표는 여기 영향을 받지 않습니다 — 항상 확정 일봉 기준입니다.
 // ============================================================
 
@@ -15,12 +17,14 @@ export default function LiveQuote({
   ticker,
   currency,
   fallback,
+  initial = null,
 }: {
   ticker: string;
   currency: Currency;
   fallback: PriceInfo | null;
+  initial?: QuoteResponse | null;
 }) {
-  const [res, setRes] = useState<QuoteResponse | null>(null);
+  const [res, setRes] = useState<QuoteResponse | null>(initial);
 
   useEffect(() => {
     let alive = true;
@@ -44,12 +48,14 @@ export default function LiveQuote({
       }
     }
 
-    load();
+    if (!initial) load();
     const id = setInterval(load, REFRESH_MS);
     return () => {
       alive = false;
       clearInterval(id);
     };
+    // initial 은 첫 렌더 값일 뿐이라 의존성에서 뺍니다(바뀌어도 다시 구독할 이유가 없음)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticker]);
 
   const live = res?.live && res.quote ? res.quote : null;
