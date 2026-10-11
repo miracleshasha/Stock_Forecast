@@ -50,8 +50,15 @@ export interface HomeData {
   movers: { highs: HomeRow[]; lows: HomeRow[]; volume: RankedRow[] };
   /** ⑥ 업종별 흐름 (3종목 이상인 업종만, 평균 점수 높은 순) */
   sectors: { KR: SectorStat[]; US: SectorStat[] };
+  /** 단기 신호(캔들 패턴) 종목 — 각 시장 최신 거래일 봉 기준 */
+  shortTerm: { up: ShortRow[]; down: ShortRow[] };
   /** 종목별 행 조회용(즐겨찾기 요약) */
   byTicker: Map<string, HomeRow>;
+}
+
+export interface ShortRow extends HomeRow {
+  /** 그날 나온 패턴 이름(같은 방향 먼저) */
+  patterns: string[];
 }
 
 export interface SectorStat {
@@ -84,6 +91,7 @@ type Stat = {
   zone: Zone | null;
   signal_date: string | null;
   zone_prev: Zone | null;
+  short_term: { tone: number; patterns: { key: string; name: string; dir: number }[] } | null;
 };
 
 const num = (v: unknown): number | null => {
@@ -109,7 +117,7 @@ function cachedQuery<A extends unknown[], T>(key: string, fn: (sb: SupabaseClien
   );
 }
 
-const qHomeStats = cachedQuery("home-stats-v1", (sb) => sb.from("mv_home_stats").select("*").limit(5000));
+const qHomeStats = cachedQuery("home-stats-v2", (sb) => sb.from("mv_home_stats").select("*").limit(5000));
 const qHomeSymbols = cachedQuery("home-symbols-v1", (sb) =>
   sb.from("symbols").select("ticker, name_ko, name_en, currency, sector").limit(5000));
 const qKospi = cachedQuery("home-kospi-v1", (sb) =>
@@ -220,6 +228,22 @@ export async function getHomeData(limit = 5): Promise<HomeData | null> {
     .map((s) => ({ ...toRow(s), value: s.vol_ratio20! }))
     .sort((a, b) => b.value - a.value);
 
+  // 단기 신호 종목: 같은 방향 패턴이 많을수록, 거래량이 클수록 위로
+  const shortOf = (tone: 1 | -1): ShortRow[] =>
+    fresh
+      .filter((s) => s.short_term?.tone === tone)
+      .map((s) => {
+        const pats = s.short_term!.patterns;
+        const same = pats.filter((p) => p.dir === tone);
+        return {
+          row: { ...toRow(s), patterns: [...same, ...pats.filter((p) => p.dir !== tone)].map((p) => p.name) },
+          k: same.length,
+          vr: s.vol_ratio20 ?? 0,
+        };
+      })
+      .sort((a, b) => b.k - a.k || b.vr - a.vr)
+      .map((x) => x.row);
+
   // ⑥ 업종별 흐름
   const sectorsOf = (rows: Stat[]): SectorStat[] => {
     const groups = new Map<string, Stat[]>();
@@ -252,6 +276,7 @@ export async function getHomeData(limit = 5): Promise<HomeData | null> {
   return {
     breadth: { KR: breadthOf(inRegion("KR")), US: breadthOf(inRegion("US")) },
     sectors: { KR: sectorsOf(inRegion("KR")), US: sectorsOf(inRegion("US")) },
+    shortTerm: { up: shortOf(1), down: shortOf(-1) },
     top: { ALL: topOf(stats), KR: topOf(inRegion("KR")), US: topOf(inRegion("US")) },
     momentum: { KR: momentumOf(inRegion("KR")), US: momentumOf(inRegion("US")) },
     movers: { highs, lows, volume },

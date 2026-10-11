@@ -93,6 +93,26 @@ export default async function HomePage() {
       ]
     : [];
 
+  const patternBadge = (names: string[], tone: "up" | "down") => ({
+    text: names.length > 1 ? `${names[0]} 외 ${names.length - 1}` : names[0],
+    tone,
+    label: `패턴: ${names.join(", ")}`,
+  });
+  const shortTabs: ListTab[] = [
+    {
+      key: "up",
+      label: `반등 신호 ${home.shortTerm.up.length}`,
+      items: home.shortTerm.up.slice(0, 5).map((r) => ({ row: r, badge: patternBadge(r.patterns, "up") })),
+      empty: "오늘 반등 신호가 나온 종목이 없어요",
+    },
+    {
+      key: "down",
+      label: `하락 신호 ${home.shortTerm.down.length}`,
+      items: home.shortTerm.down.slice(0, 5).map((r) => ({ row: r, badge: patternBadge(r.patterns, "down") })),
+      empty: "오늘 하락 신호가 나온 종목이 없어요",
+    },
+  ];
+
   const flowTabs = (pick: "buys" | "sells"): ListTab[] => [
     { key: "ALL", label: "전체", items: plain(home.top.ALL[pick]) },
     { key: "KR", label: "국내", items: plain(home.top.KR[pick]) },
@@ -111,6 +131,11 @@ export default async function HomePage() {
         title="12개월 흐름 상위"
         desc="최근 1개월을 뺀 1년 수익률이 높은 종목이에요. 판정 점수와는 별개인 참고 지표예요."
         tabs={momentumTabs}
+      />
+      <TabbedList
+        title="오늘의 단기 신호"
+        desc="최근 1~3일 캔들 모양과 거래량으로 본 교과서상 신호예요. 과거 실측으로는 대부분 평소와 큰 차이가 없었으니 참고로만 봐 주세요."
+        tabs={shortTabs}
       />
       <TabbedList title="오늘의 특이 종목" desc="최근 거래일 기준으로 눈에 띄는 움직임이에요." tabs={moverTabs} />
       <SectorFlow KR={home.sectors.KR} US={home.sectors.US} />

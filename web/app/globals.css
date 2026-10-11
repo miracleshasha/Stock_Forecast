@@ -588,3 +588,5 @@ button { font-family: inherit; color: inherit; }
 .pattern__verdict { font-size: 13px; font-weight: 600; color: var(--sub); }
 .pattern__verdict.up { color: var(--up); }
 .pattern__verdict.down { color: var(--down); }
+/* 패턴 이름처럼 긴 배지는 두 줄까지 */
+.score { max-width: 104px; word-break: keep-all; line-height: 1.3; }

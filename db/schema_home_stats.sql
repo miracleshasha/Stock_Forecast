@@ -6,6 +6,8 @@
 --
 -- 머티리얼라이즈드 뷰는 RLS 가 없으므로 anon/authenticated 에서 권한을 빼고
 -- 서비스 롤(웹 서버·배치)만 읽게 합니다.
+--
+-- 컬럼을 바꿀 땐 DROP 후 다시 만들어야 합니다(머티리얼라이즈드 뷰는 ALTER 로 컬럼 추가 불가).
 -- ============================================================
 CREATE MATERIALIZED VIEW IF NOT EXISTS mv_home_stats AS
 SELECT
@@ -24,7 +26,8 @@ SELECT
   sig.score,
   sig.zone,
   sig.trade_date    AS signal_date,
-  sig_prev.zone     AS zone_prev
+  sig_prev.zone     AS zone_prev,
+  sig.short_term    -- 단기 신호(캔들 패턴), 2026-10-11 추가
 FROM symbols s
 CROSS JOIN LATERAL (
   SELECT trade_date, close, high, low FROM daily_prices d
@@ -51,7 +54,7 @@ LEFT JOIN LATERAL (
   WHERE d.ticker = s.ticker ORDER BY trade_date DESC OFFSET 252 LIMIT 1
 ) m12 ON true
 LEFT JOIN LATERAL (
-  SELECT score, zone, trade_date FROM daily_signals g
+  SELECT score, zone, trade_date, short_term FROM daily_signals g
   WHERE g.ticker = s.ticker ORDER BY trade_date DESC LIMIT 1
 ) sig ON true
 LEFT JOIN LATERAL (
