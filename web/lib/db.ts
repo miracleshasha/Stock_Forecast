@@ -4,7 +4,7 @@
 // ============================================================
 
 import { unstable_cache } from "next/cache";
-import { getHomeStatRows } from "./home";
+import { bbEventsOf, getHomeStatRows, type BbEvent } from "./home";
 import { getSupabase } from "./supabase";
 import type {
   ChartRange,
@@ -350,22 +350,47 @@ export interface FavoriteRow {
   changePct: number | null;
   score: number | null;
   zone: Zone | null;
+  /** 볼린저 밴드 통과(관심 종목 알림). 없으면 빈 배열 */
+  bb: BbEvent[];
+  /** bb 이벤트별 실측(같은 시장) — 알림의 근거 한 줄용 */
+  bbStats: Record<string, PatternStat>;
 }
 
 export async function getFavoriteRows(tickers: string[]): Promise<FavoriteRow[]> {
   const sb = getSupabase();
   if (!sb || tickers.length === 0) return [];
 
-  const [symRes, sigRes, quotes] = await Promise.all([
+  const [symRes, sigRes, quotes, statRows] = await Promise.all([
     sb.from("symbols").select("ticker, market, name_ko, name_en, currency").in("ticker", tickers),
     latestSignals(tickers),
     getLatestQuotes(tickers),
+    getHomeStatRows().catch(() => []),
   ]);
 
   const syms = symRes.data ?? [];
+  const wanted = new Set(tickers);
+  const bbByTicker = new Map(
+    statRows
+      .filter((r) => wanted.has(r.ticker as string))
+      .map((r) => [r.ticker as string, bbEventsOf(r)] as const)
+      .filter(([, ev]) => ev.length > 0),
+  );
+  // 알림이 있을 때만 실측을 읽습니다(1시간 캐시)
+  const regions = new Set(syms.filter((r) => bbByTicker.has(r.ticker as string)).map((r) => regionOf(r.market as string)));
+  const statsBy: Partial<Record<"KR" | "US", Record<string, PatternStat>>> = {};
+  await Promise.all(
+    [...regions].map(async (g) => {
+      statsBy[g] = await getPatternStats(g).catch(() => ({}));
+    }),
+  );
+
   return syms.map((r) => {
     const qt = quotes.get(r.ticker as string);
     const sig = sigRes.get(r.ticker as string);
+    const bb = bbByTicker.get(r.ticker as string) ?? [];
+    const all = statsBy[regionOf(r.market as string)] ?? {};
+    const bbStats: Record<string, PatternStat> = {};
+    for (const e of bb) if (all[e.key]) bbStats[e.key] = all[e.key];
     return {
       ticker: r.ticker as string,
       name: displayName(r),
@@ -375,6 +400,8 @@ export async function getFavoriteRows(tickers: string[]): Promise<FavoriteRow[]>
       changePct: qt?.changePct ?? null,
       score: sig?.score ?? null,
       zone: sig?.zone ?? null,
+      bb,
+      bbStats,
     };
   });
 }

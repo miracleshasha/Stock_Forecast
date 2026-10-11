@@ -68,6 +68,20 @@ export interface BbEvent {
   date: string | null;
 }
 
+/** mv_home_stats 한 줄의 단기 신호 중 볼린저 밴드 통과 이벤트만 (홈·즐겨찾기 관심 종목 알림) */
+export function bbEventsOf(s: { short_term?: unknown; signal_date?: unknown }): BbEvent[] {
+  const st = s.short_term as Stat["short_term"] | undefined;
+  return (st?.patterns ?? [])
+    .filter((p) => p.key.startsWith("bb_"))
+    .map((p) => ({
+      key: p.key as BbEvent["key"],
+      name: p.name,
+      dir: p.dir,
+      desc: p.desc ?? "",
+      date: (s.signal_date as string | null) ?? null,
+    }));
+}
+
 export interface ShortRow extends HomeRow {
   /** 그날 나온 패턴 이름(같은 방향 먼저) */
   patterns: string[];
@@ -290,14 +304,7 @@ export async function getHomeData(limit = 5): Promise<HomeData | null> {
     sectors: { KR: sectorsOf(inRegion("KR")), US: sectorsOf(inRegion("US")) },
     shortTerm: { up: shortOf(1), down: shortOf(-1) },
     bbByTicker: new Map(
-      stats
-        .map((s) => [
-          s.ticker,
-          (s.short_term?.patterns ?? [])
-            .filter((p) => p.key.startsWith("bb_"))
-            .map((p) => ({ key: p.key as BbEvent["key"], name: p.name, dir: p.dir, desc: p.desc ?? "", date: s.signal_date })),
-        ] as const)
-        .filter(([, ev]) => ev.length > 0),
+      stats.map((s) => [s.ticker, bbEventsOf(s)] as const).filter(([, ev]) => ev.length > 0),
     ),
     top: { ALL: topOf(stats), KR: topOf(inRegion("KR")), US: topOf(inRegion("US")) },
     momentum: { KR: momentumOf(inRegion("KR")), US: momentumOf(inRegion("US")) },

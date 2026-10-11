@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import Icon from "@/components/Icon";
+import FavAlerts, { type FavAlert } from "@/components/home/FavAlerts";
 import StockRow from "@/components/StockRow";
 import { useNavProgress } from "@/components/NavProgress";
 import { useSearchSheet } from "@/components/SearchSheet";
@@ -92,6 +93,19 @@ export default function FavoritesPage() {
     return { buy, neu, sell };
   }, [rows]);
 
+  // 관심 종목 알림: 볼린저 밴드를 통과한 종목 (홈과 같은 카드, 목록 위)
+  const alerts = useMemo(() => {
+    const list: FavAlert[] = [];
+    const stats: Parameters<typeof FavAlerts>[0]["stats"] = { KR: {}, US: {} };
+    for (const r of sorted) {
+      if (!r.bb?.length) continue;
+      const region = r.market === "KOSPI" || r.market === "KOSDAQ" ? "KR" : "US";
+      list.push({ row: r, events: r.bb, region });
+      Object.assign(stats[region], r.bbStats);
+    }
+    return { list, stats };
+  }, [sorted]);
+
   return (
     <main className="shell">
       <div className="page-hd">
@@ -121,6 +135,8 @@ export default function FavoritesPage() {
           </button>
         </div>
       )}
+
+      {!loading && <FavAlerts alerts={alerts.list} stats={alerts.stats} />}
 
       {!loading && rows.length > 0 && (
         <section className="card card--list" aria-label="즐겨찾기 목록">
