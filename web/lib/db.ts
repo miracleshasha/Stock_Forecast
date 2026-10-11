@@ -12,6 +12,7 @@ import type {
   Indicators,
   Macro,
   Market,
+  PatternStat,
   SearchResult,
   Signal,
   StockResponse,
@@ -137,7 +138,7 @@ export async function getStock(ticker: string): Promise<StockResponse | null> {
     getLatestQuotes([ticker]),
     sb
       .from("daily_signals")
-      .select("score, zone, summary, breakdown, tags, trade_date")
+      .select("score, zone, summary, breakdown, tags, trade_date, short_term")
       .eq("ticker", ticker)
       .order("trade_date", { ascending: false })
       .limit(1)
@@ -167,6 +168,7 @@ export async function getStock(ticker: string): Promise<StockResponse | null> {
       },
       tags: (sr.tags as string[]) ?? [],
       asOf: (sr.trade_date as string) ?? "",
+      shortTerm: (sr.short_term as Signal["shortTerm"]) ?? null,
     };
   }
 
@@ -464,3 +466,32 @@ function push(arr: { time: string; value: number }[], time: string, v: unknown) 
   const n = numOrNull(v);
   if (n != null) arr.push({ time, value: n });
 }
+
+// ---------- 단기 신호: 패턴 실측 ----------
+/** 시장(KR/US)별 패턴 실측. 주 1회 바뀌므로 1시간 캐시합니다. */
+export const getPatternStats = unstable_cache(
+  async (region: "KR" | "US"): Promise<Record<string, PatternStat>> => {
+    const sb = getSupabase();
+    if (!sb) return {};
+    const { data } = await sb.from("pattern_stats").select("*").eq("region", region);
+    const out: Record<string, PatternStat> = {};
+    for (const r of data ?? []) {
+      out[r.pattern as string] = {
+        pattern: r.pattern as string,
+        n: Number(r.n),
+        nDays: Number(r.n_days),
+        ret5: Number(r.ret5),
+        baseRet5: Number(r.base_ret5),
+        win5: Number(r.win5),
+        baseWin5: Number(r.base_win5),
+        excess5: Number(r.excess5),
+        se5: r.se5 != null ? Number(r.se5) : null,
+        periodFrom: (r.period_from as string) ?? null,
+        periodTo: (r.period_to as string) ?? null,
+      };
+    }
+    return out;
+  },
+  ["pattern-stats-v1"],
+  { revalidate: 3600 },
+);

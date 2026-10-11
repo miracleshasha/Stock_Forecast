@@ -7,7 +7,8 @@ import ExtrasCard from "@/components/ExtrasCard";
 import SetupNotice from "@/components/SetupNotice";
 import Icon from "@/components/Icon";
 import NewsCard from "@/components/NewsCard";
-import { getIndicators, getMacro, getStock, getStockExtras } from "@/lib/db";
+import ShortTermCard from "@/components/ShortTermCard";
+import { getIndicators, getMacro, getPatternStats, getStock, getStockExtras } from "@/lib/db";
 import { formatDateKo } from "@/lib/format";
 import { getInitialQuote } from "@/lib/liveQuote";
 import { getStockNews } from "@/lib/news";
@@ -37,13 +38,15 @@ export default async function StockPage({
   if (!stock) notFound();
 
   const newsName = stock.symbol.nameKo || stock.symbol.nameEn || stock.symbol.ticker;
-  const [indicators, macro, extras, news, initialQuote] = await Promise.all([
+  const region = stock.symbol.market === "KOSPI" || stock.symbol.market === "KOSDAQ" ? "KR" : "US";
+  const [indicators, macro, extras, news, initialQuote, patternStats] = await Promise.all([
     indicatorsP,
     macroP,
     getStockExtras(stock.symbol.ticker, stock.symbol.market),
     getStockNews(newsName, 5),
     // 장중이면 현재가를 먼저 받아 첫 화면부터 실시간 값으로 보여줍니다(장 마감이면 조회 안 함)
     getInitialQuote(stock.symbol, stock.price?.close ?? null),
+    getPatternStats(region).catch(() => ({})),
   ]);
   const hasSignal = stock.signal && stock.signal.zone !== "UNAVAILABLE";
 
@@ -63,6 +66,15 @@ export default async function StockPage({
       )}
 
       <VerdictCard signal={stock.signal} />
+
+      {hasSignal && (
+        <ShortTermCard
+          shortTerm={stock.signal!.shortTerm}
+          stats={patternStats}
+          asOf={stock.signal!.asOf}
+          marketLabel={region === "KR" ? "국내 종목" : "미국 종목"}
+        />
+      )}
 
       {hasSignal && (
         <IndicatorPanel

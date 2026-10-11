@@ -83,6 +83,37 @@ export interface Signal {
   breakdown: SignalBreakdown;
   tags: string[];
   asOf: string;
+  /** 단기 신호(캔들 패턴·가격위치×거래량). 판정 점수와 별개. 배치 batch/patterns.py */
+  shortTerm: ShortTerm | null;
+}
+
+export interface ShortTermPattern {
+  key: string;
+  name: string;
+  /** 교과서상 방향: 1 상승, -1 하락, 0 중립 */
+  dir: number;
+  desc: string;
+}
+
+export interface ShortTerm {
+  label: string;
+  tone: number;
+  patterns: ShortTermPattern[];
+}
+
+/** 패턴 실측(batch/pattern_backtest.py) — 다음 5거래일 수익률을 같은 시장 아무 날과 비교 */
+export interface PatternStat {
+  pattern: string;
+  n: number;
+  nDays: number;
+  ret5: number;
+  baseRet5: number;
+  win5: number;
+  baseWin5: number;
+  excess5: number;
+  se5: number | null;
+  periodFrom: string | null;
+  periodTo: string | null;
 }
 
 export interface StockResponse {

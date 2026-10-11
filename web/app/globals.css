@@ -576,3 +576,15 @@ button { font-family: inherit; color: inherit; }
 .brief__c { font-size: 14px; font-weight: 700; }
 .brief__spark { display: block; margin: 6px 0 2px; }
 .brief__d { font-size: 11px; color: rgba(255, 255, 255, 0.5); }
+
+/* ---------- 단기 신호 ---------- */
+.patterns { list-style: none; display: flex; flex-direction: column; }
+.pattern { display: flex; flex-direction: column; gap: 4px; padding: 12px 0; }
+.pattern + .pattern { border-top: 1px solid var(--line); }
+.pattern__hd { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pattern__book { font-size: 12px; color: var(--cap); }
+.pattern__desc { font-size: 14px; color: var(--ink); word-break: keep-all; }
+.pattern__stat { font-size: 12px; color: var(--cap); word-break: keep-all; }
+.pattern__verdict { font-size: 13px; font-weight: 600; color: var(--sub); }
+.pattern__verdict.up { color: var(--up); }
+.pattern__verdict.down { color: var(--down); }

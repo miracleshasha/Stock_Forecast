@@ -42,6 +42,7 @@ import config
 import indicators
 import kis_client
 import macro as macro_mod
+import patterns
 import scoring
 import supabase_io
 
@@ -224,6 +225,8 @@ def process_symbol(sym: dict, macro: dict, full: bool = False) -> bool:
         "summary": sig["summary"],
         "breakdown": sig["breakdown"],
         "tags": sig["tags"],
+        # 단기 신호(캔들 패턴·가격위치×거래량). 판정 점수에는 들어가지 않습니다.
+        "short_term": patterns.short_term(df) if sig["zone"] != "UNAVAILABLE" else None,
     }], "ticker,trade_date")
 
     written = len(write_df)
@@ -314,6 +317,10 @@ def main(argv: list[str]):
             if full:
                 print("업종 빈 곳 채우기…")
                 extras.fill_sectors(symbols, only_missing=True)
+                # 패턴 실측은 4년치를 다시 훑으므로(약 1분) 주 1회 전량 배치 때만
+                print("캔들 패턴 실측 갱신…")
+                import pattern_backtest
+                pattern_backtest.run(fresh=True, save=True)
         except Exception as e:  # noqa: BLE001
             print(f"  [경고] 부가 데이터 수집 실패: {e}")
 
