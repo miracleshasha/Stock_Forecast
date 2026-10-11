@@ -590,3 +590,15 @@ button { font-family: inherit; color: inherit; }
 .pattern__verdict.down { color: var(--down); }
 /* 패턴 이름처럼 긴 배지는 두 줄까지 */
 .score { max-width: 104px; word-break: keep-all; line-height: 1.3; }
+
+/* ---------- 패턴 차트 ---------- */
+.pchart { display: flex; flex-direction: column; gap: 6px; margin: 2px 0 4px; }
+.pchart svg { display: block; overflow: visible; }
+.pchart__hl { fill: #FFF6DB; }
+.pchart__hltext { font-size: 11px; font-weight: 700; fill: #8A6D00; }
+.pchart__up { fill: var(--up); stroke: var(--up); }
+.pchart__down { fill: var(--down); stroke: var(--down); }
+.pchart__flat { fill: var(--sub); stroke: var(--sub); }
+.pchart__vol { opacity: .35; }
+.pchart__avg { stroke: var(--faint); stroke-width: 1; stroke-dasharray: 3 3; }
+.pchart__axis { font-size: 11px; fill: var(--cap); }

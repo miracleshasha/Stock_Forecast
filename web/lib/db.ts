@@ -495,3 +495,40 @@ export const getPatternStats = unstable_cache(
   ["pattern-stats-v1"],
   { revalidate: 3600 },
 );
+
+// ---------- 단기 신호: 패턴 차트용 최근 봉 ----------
+export interface MiniCandle {
+  date: string; // YYYY-MM-DD
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+/** 판정 기준일(upTo)까지의 최근 n개 일봉(오름차순). 패턴 차트에 씁니다. 5분 캐시. */
+export const getRecentCandles = unstable_cache(
+  async (ticker: string, upTo: string, n = 12): Promise<MiniCandle[]> => {
+    const sb = getSupabase();
+    if (!sb) return [];
+    const { data } = await sb
+      .from("daily_prices")
+      .select("trade_date, open, high, low, close, volume")
+      .eq("ticker", ticker)
+      .lte("trade_date", upTo)
+      .order("trade_date", { ascending: false })
+      .limit(n);
+    return (data ?? [])
+      .map((r) => ({
+        date: r.trade_date as string,
+        open: Number(r.open),
+        high: Number(r.high),
+        low: Number(r.low),
+        close: Number(r.close),
+        volume: Number(r.volume),
+      }))
+      .reverse();
+  },
+  ["recent-candles-v1"],
+  { revalidate: 300, tags: ["home"] },
+);

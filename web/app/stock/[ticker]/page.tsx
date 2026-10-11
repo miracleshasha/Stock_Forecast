@@ -8,7 +8,7 @@ import SetupNotice from "@/components/SetupNotice";
 import Icon from "@/components/Icon";
 import NewsCard from "@/components/NewsCard";
 import ShortTermCard from "@/components/ShortTermCard";
-import { getIndicators, getMacro, getPatternStats, getStock, getStockExtras } from "@/lib/db";
+import { getIndicators, getMacro, getPatternStats, getRecentCandles, getStock, getStockExtras } from "@/lib/db";
 import { formatDateKo } from "@/lib/format";
 import { getInitialQuote } from "@/lib/liveQuote";
 import { getStockNews } from "@/lib/news";
@@ -39,7 +39,8 @@ export default async function StockPage({
 
   const newsName = stock.symbol.nameKo || stock.symbol.nameEn || stock.symbol.ticker;
   const region = stock.symbol.market === "KOSPI" || stock.symbol.market === "KOSDAQ" ? "KR" : "US";
-  const [indicators, macro, extras, news, initialQuote, patternStats] = await Promise.all([
+  const st = stock.signal?.shortTerm;
+  const [indicators, macro, extras, news, initialQuote, patternStats, recentCandles] = await Promise.all([
     indicatorsP,
     macroP,
     getStockExtras(stock.symbol.ticker, stock.symbol.market),
@@ -47,6 +48,10 @@ export default async function StockPage({
     // 장중이면 현재가를 먼저 받아 첫 화면부터 실시간 값으로 보여줍니다(장 마감이면 조회 안 함)
     getInitialQuote(stock.symbol, stock.price?.close ?? null),
     getPatternStats(region).catch(() => ({})),
+    // 패턴이 있을 때만 차트용 최근 봉을 읽습니다(판정 기준일까지)
+    st && st.patterns.length > 0 && stock.signal?.asOf
+      ? getRecentCandles(stock.symbol.ticker, stock.signal.asOf, 12).catch(() => [])
+      : Promise.resolve([]),
   ]);
   const hasSignal = stock.signal && stock.signal.zone !== "UNAVAILABLE";
 
@@ -73,6 +78,7 @@ export default async function StockPage({
           stats={patternStats}
           asOf={stock.signal!.asOf}
           marketLabel={region === "KR" ? "국내 종목" : "미국 종목"}
+          candles={recentCandles}
         />
       )}
 

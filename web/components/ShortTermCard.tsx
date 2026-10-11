@@ -1,4 +1,6 @@
+import type { MiniCandle } from "@/lib/db";
 import type { PatternStat, ShortTerm } from "@/lib/types";
+import PatternChart from "./PatternChart";
 import { formatDateKo } from "@/lib/format";
 
 const MIN_DAYS = 30; // 이보다 적은 날짜에서만 나온 패턴은 실측을 말하기 어렵다고 봅니다
@@ -26,7 +28,9 @@ export default function ShortTermCard({
   stats,
   asOf,
   marketLabel,
+  candles = [],
 }: {
+  candles?: MiniCandle[];
   shortTerm: ShortTerm | null;
   stats: Record<string, PatternStat>;
   asOf: string;
@@ -42,6 +46,14 @@ export default function ShortTermCard({
         {asOf && <span className="caption" style={{ padding: 0 }}>{formatDateKo(asOf)} 봉 기준</span>}
       </div>
       <span className={`verdict__zone ${tone}`} style={{ fontSize: 22 }}>{shortTerm.label}</span>
+
+      {shortTerm.patterns.length > 0 && (
+        <PatternChart
+          candles={candles}
+          patternKeys={shortTerm.patterns.map((p) => p.key)}
+          label={shortTerm.patterns.length > 1 ? `${shortTerm.patterns[0].name} 외 ${shortTerm.patterns.length - 1}` : shortTerm.patterns[0].name}
+        />
+      )}
 
       {shortTerm.patterns.length === 0 ? (
         <p className="sec-desc">최근 1~3일 봉에서 눈에 띄는 패턴이 나오지 않았어요.</p>
