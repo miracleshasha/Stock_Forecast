@@ -52,8 +52,20 @@ export interface HomeData {
   sectors: { KR: SectorStat[]; US: SectorStat[] };
   /** 단기 신호(캔들 패턴) 종목 — 각 시장 최신 거래일 봉 기준 */
   shortTerm: { up: ShortRow[]; down: ShortRow[] };
+  /** 종목별 볼린저 밴드 통과 이벤트(관심 종목 알림용) */
+  bbByTicker: Map<string, BbEvent[]>;
   /** 종목별 행 조회용(즐겨찾기 요약) */
   byTicker: Map<string, HomeRow>;
+}
+
+export interface BbEvent {
+  key: "bb_lower_break" | "bb_lower_reentry" | "bb_upper_break" | "bb_upper_reentry";
+  name: string;
+  /** 교과서상 방향: 1 = 매수 고려, -1 = 매도 고려 */
+  dir: number;
+  desc: string;
+  /** 어느 날 봉에서 나왔는지 */
+  date: string | null;
 }
 
 export interface ShortRow extends HomeRow {
@@ -91,7 +103,7 @@ type Stat = {
   zone: Zone | null;
   signal_date: string | null;
   zone_prev: Zone | null;
-  short_term: { tone: number; patterns: { key: string; name: string; dir: number }[] } | null;
+  short_term: { tone: number; patterns: { key: string; name: string; dir: number; desc?: string }[] } | null;
 };
 
 const num = (v: unknown): number | null => {
@@ -277,6 +289,16 @@ export async function getHomeData(limit = 5): Promise<HomeData | null> {
     breadth: { KR: breadthOf(inRegion("KR")), US: breadthOf(inRegion("US")) },
     sectors: { KR: sectorsOf(inRegion("KR")), US: sectorsOf(inRegion("US")) },
     shortTerm: { up: shortOf(1), down: shortOf(-1) },
+    bbByTicker: new Map(
+      stats
+        .map((s) => [
+          s.ticker,
+          (s.short_term?.patterns ?? [])
+            .filter((p) => p.key.startsWith("bb_"))
+            .map((p) => ({ key: p.key as BbEvent["key"], name: p.name, dir: p.dir, desc: p.desc ?? "", date: s.signal_date })),
+        ] as const)
+        .filter(([, ev]) => ev.length > 0),
+    ),
     top: { ALL: topOf(stats), KR: topOf(inRegion("KR")), US: topOf(inRegion("US")) },
     momentum: { KR: momentumOf(inRegion("KR")), US: momentumOf(inRegion("US")) },
     movers: { highs, lows, volume },

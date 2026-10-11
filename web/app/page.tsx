@@ -1,5 +1,6 @@
 import SearchBox from "@/components/SearchBox";
 import SetupNotice from "@/components/SetupNotice";
+import FavAlerts, { type FavAlert } from "@/components/home/FavAlerts";
 import FavoritesSummary from "@/components/home/FavoritesSummary";
 import MarketMood from "@/components/home/MarketMood";
 import MarketTemps from "@/components/home/MarketTemps";
@@ -9,6 +10,7 @@ import { getSessionUserId } from "@/lib/auth";
 import { formatDateKo, formatWonMillion } from "@/lib/format";
 import { getHomeData, getInvestorFlows, getMarketTemps, type HomeRow, type RankedRow } from "@/lib/home";
 import { isSupabaseConfigured } from "@/lib/supabase";
+import { getPatternStats } from "@/lib/db";
 import { listFavorites } from "@/lib/userFavorites";
 
 export const dynamic = "force-dynamic";
@@ -46,6 +48,20 @@ export default async function HomePage() {
     .reverse()
     .map((f) => home.byTicker.get(f.ticker))
     .filter((r): r is HomeRow => !!r);
+
+  // 관심 종목 알림: 즐겨찾기 중 볼린저 밴드를 통과한 종목 (홈 맨 위)
+  const favAlerts: FavAlert[] = favs
+    .map((f) => {
+      const row = home.byTicker.get(f.ticker);
+      const events = home.bbByTicker.get(f.ticker) ?? [];
+      const region: "KR" | "US" = f.market === "KOSPI" || f.market === "KOSDAQ" ? "KR" : "US";
+      return row && events.length ? { row, events, region } : null;
+    })
+    .filter((a): a is FavAlert => a != null);
+  const alertStats = favAlerts.length
+    ? await Promise.all([getPatternStats("KR").catch(() => ({})), getPatternStats("US").catch(() => ({}))])
+        .then(([KR, US]) => ({ KR, US }))
+    : { KR: {}, US: {} };
 
   const momentumTabs: ListTab[] = [
     { key: "KR", label: "국내", items: home.momentum.KR.map((r) => ({ row: r, badge: pctBadge(r) })) },
@@ -122,6 +138,7 @@ export default async function HomePage() {
   return (
     <main className="shell">
       <h1 className="sr-only">시그널데스크 — 종목 차트 흐름 요약</h1>
+      <FavAlerts alerts={favAlerts} stats={alertStats} />
       <SearchBox />
 
       <FavoritesSummary rows={favRows.slice(0, FAV_PREVIEW)} total={favRows.length} />

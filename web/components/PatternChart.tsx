@@ -5,6 +5,7 @@ export const PATTERN_SPAN: Record<string, number> = {
   bull_engulfing: 2, bear_engulfing: 2, piercing: 2, dark_cloud: 2,
   bull_harami: 2, bear_harami: 2, tweezer_bottom: 2, tweezer_top: 2,
   morning_star: 3, evening_star: 3, three_white_soldiers: 3, three_black_crows: 3,
+  bb_lower_break: 2, bb_lower_reentry: 2, bb_upper_break: 2, bb_upper_reentry: 2,
 };
 const VOLUME_PATTERNS = new Set(["low_volume_surge", "high_volume_surge", "low_volume_dry", "high_volume_dry"]);
 
@@ -36,12 +37,17 @@ export default function PatternChart({
   if (candles.length < 3) return null;
   const span = Math.max(1, ...patternKeys.map((k) => PATTERN_SPAN[k] ?? 1));
   const volumeFocus = patternKeys.some((k) => VOLUME_PATTERNS.has(k));
+  const bandFocus = patternKeys.some((k) => k.startsWith("bb_"));
 
   const n = candles.length;
   const slot = W / n;
   const bodyW = Math.max(4, slot * 0.56);
-  const hi = Math.max(...candles.map((c) => c.high));
-  const lo = Math.min(...candles.map((c) => c.low));
+  // 볼린저 패턴이면 밴드선도 그리므로 축 범위에 포함
+  const bandVals = bandFocus
+    ? candles.flatMap((c) => [c.bbUpper, c.bbLower]).filter((v): v is number => v != null)
+    : [];
+  const hi = Math.max(...candles.map((c) => c.high), ...bandVals);
+  const lo = Math.min(...candles.map((c) => c.low), ...bandVals);
   const pad = (hi - lo) * 0.06 || hi * 0.01 || 1;
   const yP = (v: number) => PRICE_TOP + ((hi + pad - v) / (hi - lo + 2 * pad)) * PRICE_H;
   const maxV = Math.max(...candles.map((c) => c.volume)) || 1;
@@ -59,6 +65,18 @@ export default function PatternChart({
         <text x={W - 4} y={15} textAnchor="end" className="pchart__hltext">
           {label}
         </text>
+
+        {bandFocus && (
+          <g className="pchart__band">
+            {(["bbUpper", "bbLower"] as const).map((k) => {
+              const pts = candles
+                .map((c, i) => (c[k] != null ? `${(i * slot + slot / 2).toFixed(1)},${yP(c[k]!).toFixed(1)}` : null))
+                .filter(Boolean)
+                .join(" ");
+              return pts ? <polyline key={k} points={pts} /> : null;
+            })}
+          </g>
+        )}
 
         {candles.map((c, i) => {
           const x = i * slot + slot / 2;
@@ -89,6 +107,7 @@ export default function PatternChart({
       </svg>
       <figcaption className="caption" style={{ padding: 0 }}>
         최근 {n}거래일 일봉이에요. 강조한 {span === 1 ? "봉" : `${span}개 봉`}에서 패턴이 나왔어요
+        {bandFocus ? " · 주황 선은 볼린저 밴드 상·하단이에요" : ""}
         {volumeFocus ? " · 아래 점선은 이 구간 평균 거래량이에요" : ""}.
       </figcaption>
     </figure>

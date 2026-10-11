@@ -504,6 +504,9 @@ export interface MiniCandle {
   low: number;
   close: number;
   volume: number;
+  /** 볼린저 밴드(20일 ±2σ) — 볼린저 패턴일 때 차트에 선으로 그림 */
+  bbUpper: number | null;
+  bbLower: number | null;
 }
 
 /** 판정 기준일(upTo)까지의 최근 n개 일봉(오름차순). 패턴 차트에 씁니다. 5분 캐시. */
@@ -511,24 +514,37 @@ export const getRecentCandles = unstable_cache(
   async (ticker: string, upTo: string, n = 12): Promise<MiniCandle[]> => {
     const sb = getSupabase();
     if (!sb) return [];
-    const { data } = await sb
-      .from("daily_prices")
-      .select("trade_date, open, high, low, close, volume")
-      .eq("ticker", ticker)
-      .lte("trade_date", upTo)
-      .order("trade_date", { ascending: false })
-      .limit(n);
+    const [{ data }, { data: ind }] = await Promise.all([
+      sb.from("daily_prices")
+        .select("trade_date, open, high, low, close, volume")
+        .eq("ticker", ticker)
+        .lte("trade_date", upTo)
+        .order("trade_date", { ascending: false })
+        .limit(n),
+      sb.from("daily_indicators")
+        .select("trade_date, bb_upper, bb_lower")
+        .eq("ticker", ticker)
+        .lte("trade_date", upTo)
+        .order("trade_date", { ascending: false })
+        .limit(n),
+    ]);
+    const bands = new Map((ind ?? []).map((r) => [r.trade_date as string, r]));
     return (data ?? [])
-      .map((r) => ({
-        date: r.trade_date as string,
-        open: Number(r.open),
-        high: Number(r.high),
-        low: Number(r.low),
-        close: Number(r.close),
-        volume: Number(r.volume),
-      }))
+      .map((r) => {
+        const b = bands.get(r.trade_date as string);
+        return {
+          date: r.trade_date as string,
+          open: Number(r.open),
+          high: Number(r.high),
+          low: Number(r.low),
+          close: Number(r.close),
+          volume: Number(r.volume),
+          bbUpper: b?.bb_upper != null ? Number(b.bb_upper) : null,
+          bbLower: b?.bb_lower != null ? Number(b.bb_lower) : null,
+        };
+      })
       .reverse();
   },
-  ["recent-candles-v1"],
+  ["recent-candles-v2"],
   { revalidate: 300, tags: ["home"] },
 );

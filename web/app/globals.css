@@ -602,3 +602,17 @@ button { font-family: inherit; color: inherit; }
 .pchart__vol { opacity: .35; }
 .pchart__avg { stroke: var(--faint); stroke-width: 1; stroke-dasharray: 3 3; }
 .pchart__axis { font-size: 11px; fill: var(--cap); }
+.pchart__band polyline { fill: none; stroke: #E8A317; stroke-width: 1.4; stroke-dasharray: 4 3; }
+
+/* ---------- 관심 종목 알림 ---------- */
+.alerts { border: 2px solid #FFE08A; background: #FFFCF2; }
+.alerts__list { list-style: none; display: flex; flex-direction: column; }
+.alerts__list li + li { border-top: 1px solid #F3E7C0; }
+.alert { display: flex; flex-direction: column; gap: 3px; padding: 12px 0; }
+.alert__hd { display: flex; align-items: center; gap: 8px; }
+.alert__name { font-size: 16px; font-weight: 700; }
+.alert__meta { font-size: 12px; color: var(--cap); }
+.alert__what { font-size: 14px; color: var(--ink); }
+.alert__desc { font-size: 13px; color: var(--sub); word-break: keep-all; }
+.alert__ev { font-size: 12px; color: var(--cap); word-break: keep-all; }
+.alert__ev--strong { color: var(--ink); font-weight: 600; }

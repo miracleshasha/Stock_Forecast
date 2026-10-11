@@ -40,6 +40,11 @@ PATTERNS: dict[str, tuple[str, int, str]] = {
     "evening_star": ("석별형", -1, "큰 양봉 → 작은 봉 → 큰 음봉, 상승이 멈추는 3일 모양이에요"),
     "three_white_soldiers": ("적삼병", 1, "양봉 3개가 연달아 높아졌어요"),
     "three_black_crows": ("흑삼병", -1, "음봉 3개가 연달아 낮아졌어요"),
+    # 볼린저 밴드(20일, ±2σ) 통과 — 어제와 오늘 종가가 밴드선을 사이에 두고 갈린 날
+    "bb_lower_break": ("볼린저 하단 이탈", 1, "종가가 볼린저 하단 아래로 내려갔어요 — 과매도 구간, 교과서상 매수 고려 자리예요"),
+    "bb_lower_reentry": ("볼린저 하단 복귀", 1, "하단 아래에 있던 종가가 밴드 안으로 돌아왔어요 — 반등이 시작될 수 있는 자리예요"),
+    "bb_upper_break": ("볼린저 상단 돌파", -1, "종가가 볼린저 상단 위로 올라갔어요 — 과열 구간, 교과서상 매도(차익) 고려 자리예요"),
+    "bb_upper_reentry": ("볼린저 상단 복귀", -1, "상단 위에 있던 종가가 밴드 안으로 내려왔어요 — 상승 힘이 꺾일 수 있는 자리예요"),
     # 가격 위치(최근 20일 범위 안) × 거래량(20일 평균 대비)
     "low_volume_surge": ("저가권 거래량 급증", 1, "20일 중 낮은 자리에서 거래가 평소의 2배 넘게 터졌어요"),
     "high_volume_surge": ("고가권 거래량 급증", -1, "20일 중 높은 자리에서 거래가 평소의 2배 넘게 터졌어요"),
@@ -168,6 +173,21 @@ def detect_at(df: pd.DataFrame, i: int) -> list[str]:
             out.append("three_white_soldiers")
         if soldiers(-1):
             out.append("three_black_crows")
+
+    # ---- 볼린저 밴드 통과 (어제 → 오늘 종가) ----
+    if "bb_upper" in df and "bb_lower" in df:
+        up0, lo0 = _f(df["bb_upper"].values[i]), _f(df["bb_lower"].values[i])
+        up1, lo1 = _f(df["bb_upper"].values[i - 1]), _f(df["bb_lower"].values[i - 1])
+        c1 = b1["c"]
+        if not any(math.isnan(x) for x in (up0, lo0, up1, lo1, c1)):
+            if c1 >= lo1 and b0["c"] < lo0:
+                out.append("bb_lower_break")
+            elif c1 < lo1 and b0["c"] >= lo0:
+                out.append("bb_lower_reentry")
+            if c1 <= up1 and b0["c"] > up0:
+                out.append("bb_upper_break")
+            elif c1 > up1 and b0["c"] <= up0:
+                out.append("bb_upper_reentry")
 
     # ---- 가격 위치 × 거래량 ----
     hi20 = max(_f(x) for x in h[i - 19:i + 1])

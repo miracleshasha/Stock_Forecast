@@ -27,7 +27,7 @@ import pandas as pd
 import patterns
 import supabase_io
 
-CACHE = Path(__file__).parent / "logs" / "pattern_prices.pkl"
+CACHE = Path(__file__).parent / "logs" / "pattern_prices_v2.pkl"  # v2: 볼린저 밴드 컬럼 포함
 HORIZONS = (1, 5)
 KR = {"KOSPI", "KOSDAQ"}
 
@@ -46,6 +46,11 @@ def load_prices(fresh: bool) -> dict[str, tuple[str, pd.DataFrame]]:
             df[k] = pd.to_numeric(df[k], errors="coerce")
         vol_ma = df["volume"].rolling(20).mean().replace(0, pd.NA)
         df["vol_ratio20"] = df["volume"] / vol_ma
+        # 볼린저 밴드: indicators.py 와 같은 정의(20일, 모표준편차 ddof=0, ±2σ)
+        ma20 = df["close"].rolling(20).mean()
+        std20 = df["close"].rolling(20).std(ddof=0)
+        df["bb_upper"] = ma20 + 2 * std20
+        df["bb_lower"] = ma20 - 2 * std20
         return s["ticker"], ("KR" if s["market"] in KR else "US", df.reset_index(drop=True))
 
     with ThreadPoolExecutor(8) as ex:
