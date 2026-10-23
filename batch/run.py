@@ -214,7 +214,10 @@ def process_symbol(sym: dict, macro: dict, full: bool = False) -> bool:
     # 6) 업서트 — 증분이면 재검증 윈도우 이후만, 전량이면 전 구간
     write_df = df if write_dates is None else df[df["date"].isin(write_dates)]
     supabase_io.upsert("daily_prices", _price_rows(ticker, write_df), "ticker,trade_date")
-    supabase_io.upsert("daily_indicators", _indicator_rows(ticker, write_df), "ticker,trade_date")
+    # 지표는 최근 INDICATOR_KEEP_DAYS 일만 저장(전량 모드여도 오래된 날짜는 쓰지 않음)
+    ind_cut = (datetime.now() - timedelta(days=config.INDICATOR_KEEP_DAYS)).strftime("%Y%m%d")
+    ind_df = write_df[write_df["date"].astype(str) >= ind_cut]
+    supabase_io.upsert("daily_indicators", _indicator_rows(ticker, ind_df), "ticker,trade_date")
 
     trade_date = kis_client.iso(str(df.iloc[-1]["date"]))
     supabase_io.upsert("daily_signals", [{
@@ -323,6 +326,14 @@ def main(argv: list[str]):
                 pattern_backtest.run(fresh=True, save=True)
         except Exception as e:  # noqa: BLE001
             print(f"  [경고] 부가 데이터 수집 실패: {e}")
+
+    # 오래된 지표 정리(주 1회 전량 배치 때) — 보관 기간이 지난 행 삭제
+    if full and ok:
+        try:
+            n = supabase_io.prune_indicators(config.INDICATOR_KEEP_DAYS)
+            print(f"오래된 지표 정리: {n}행 삭제")
+        except Exception as e:  # noqa: BLE001
+            print(f"  [경고] 지표 정리 실패: {e}")
 
     # 홈 화면 요약 갱신 (실패해도 적재 결과는 유효하므로 배치는 성공으로 둡니다)
     if ok:

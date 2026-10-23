@@ -262,7 +262,7 @@ const RANGE_DAYS: Record<ChartRange, number> = { "1M": 31, "3M": 92, "6M": 183, 
 /** 일봉·지표는 배치 때만 바뀌므로 종목·기간별로 5분 캐시합니다 */
 export const getChart = unstable_cache(
   (ticker: string, range: ChartRange) => loadChart(ticker, range),
-  ["chart-v1"],
+  ["chart-v2"],
   { revalidate: 300, tags: ["home"] },
 );
 
@@ -281,7 +281,10 @@ async function loadChart(
   cutoff.setDate(cutoff.getDate() - RANGE_DAYS[range]);
   const cutoffStr = cutoff.toISOString().slice(0, 10);
 
-  const [pricesRes, indRes] = await Promise.all([
+  // 이동평균·볼린저 선은 일봉에서 직접 계산합니다(2026-10: 지표 테이블은 최근 1년치만 보관).
+  // MA120 이 차트 첫날부터 그려지도록 기간 앞쪽으로 워밍업 120거래일을 더 읽습니다.
+  const WARMUP = 120;
+  const [inRangeRes, warmupRes] = await Promise.all([
     sb
       .from("daily_prices")
       .select("trade_date, open, high, low, close, volume")
@@ -289,15 +292,16 @@ async function loadChart(
       .gte("trade_date", cutoffStr)
       .order("trade_date", { ascending: true }),
     sb
-      .from("daily_indicators")
-      .select("trade_date, ma20, ma60, ma120, bb_upper, bb_lower, bb_mid")
+      .from("daily_prices")
+      .select("trade_date, close")
       .eq("ticker", ticker)
-      .gte("trade_date", cutoffStr)
-      .order("trade_date", { ascending: true }),
+      .lt("trade_date", cutoffStr)
+      .order("trade_date", { ascending: false })
+      .limit(WARMUP),
   ]);
 
-  const prices = pricesRes.data ?? [];
-  const inds = indRes.data ?? [];
+  const prices = inRangeRes.data ?? [];
+  const warm = [...(warmupRes.data ?? [])].reverse();
 
   const series: ChartSeries = { ...empty, candles: [], ma20: [], ma60: [], ma120: [], bbUpper: [], bbLower: [], bbMid: [], envUpper: [], envLower: [], volMa20: [] };
 
@@ -321,20 +325,32 @@ async function loadChart(
     }
   }
 
-  for (const d of inds) {
-    const t = d.trade_date as string;
-    push(series.ma20, t, d.ma20);
-    push(series.ma60, t, d.ma60);
-    push(series.ma120, t, d.ma120);
-    push(series.bbUpper, t, d.bb_upper);
-    push(series.bbLower, t, d.bb_lower);
-    push(series.bbMid, t, d.bb_mid);
-    // 엔벨로프 = MA20 × (1 ± 0.10)
-    const mid = numOrNull(d.ma20);
-    if (mid != null) {
-      series.envUpper.push({ time: t, value: mid * 1.1 });
-      series.envLower.push({ time: t, value: mid * 0.9 });
+  // 종가 시계열(워밍업 + 기간) → 이동평균·볼린저(20, ±2σ, 모표준편차 — batch/indicators.py 와 같은 정의)
+  const closes = [...warm.map((r) => Number(r.close)), ...series.candles.map((c) => c.close)];
+  const offset = warm.length;
+  const mean = (end: number, n: number) => {
+    let s = 0;
+    for (let j = end - n + 1; j <= end; j++) s += closes[j];
+    return s / n;
+  };
+  for (let k = 0; k < series.candles.length; k++) {
+    const i = offset + k;
+    const t = series.candles[k].time;
+    if (i >= 19) {
+      const m20 = mean(i, 20);
+      let v = 0;
+      for (let j = i - 19; j <= i; j++) v += (closes[j] - m20) ** 2;
+      const sd = Math.sqrt(v / 20);
+      series.ma20.push({ time: t, value: m20 });
+      series.bbMid.push({ time: t, value: m20 });
+      series.bbUpper.push({ time: t, value: m20 + 2 * sd });
+      series.bbLower.push({ time: t, value: m20 - 2 * sd });
+      // 엔벨로프 = MA20 × (1 ± 0.10)
+      series.envUpper.push({ time: t, value: m20 * 1.1 });
+      series.envLower.push({ time: t, value: m20 * 0.9 });
     }
+    if (i >= 59) series.ma60.push({ time: t, value: mean(i, 60) });
+    if (i >= 119) series.ma120.push({ time: t, value: mean(i, 120) });
   }
 
   return series;
@@ -488,10 +504,6 @@ function numOrNull(v: unknown): number | null {
   if (v == null) return null;
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
-}
-function push(arr: { time: string; value: number }[], time: string, v: unknown) {
-  const n = numOrNull(v);
-  if (n != null) arr.push({ time, value: n });
 }
 
 // ---------- 단기 신호: 패턴 실측 ----------

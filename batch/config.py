@@ -60,6 +60,11 @@ MIN_INCREMENTAL_ROWS = int(_get("MIN_INCREMENTAL_ROWS", "5"))
 # 유지하기 위한 장치입니다(거래량 정정, 미완성 행 등).
 REVISION_ROWS = int(_get("REVISION_ROWS", "3"))
 
+# daily_indicators 보관 기간(일). 웹은 최신 지표와 최근 봉만 쓰고, 차트 선(이동평균·볼린저)은
+# 일봉에서 직접 계산하므로 4년치를 다 둘 필요가 없습니다(2026-10, DB 용량 절감 — 종목 확대용).
+# 시세(daily_prices)는 백테스트·차트용으로 LOOKBACK 그대로 보관합니다.
+INDICATOR_KEEP_DAYS = int(_get("INDICATOR_KEEP_DAYS", "400"))
+
 # 해외 종목: 정규장이 끝나지 않은 날짜의 행을 저장하지 않습니다.
 # KIS는 미국장 개장 전에도 그날 날짜의 행을 프리마켓 체결분만 담아 내려줍니다
 # (예: NVDA 2026-09-04 거래량 41만 vs 정규장 1.35억). 전량 재조회 시절에는 다음 날

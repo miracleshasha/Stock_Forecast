@@ -162,3 +162,12 @@ def refresh_home_stats():
     resp = requests.post(url, headers=_headers(), json={}, timeout=120)
     if resp.status_code >= 300:
         raise RuntimeError(f"refresh_home_stats 실패 [{resp.status_code}]: {resp.text[:300]}")
+
+
+def prune_indicators(keep_days: int) -> int:
+    """daily_indicators 에서 keep_days 일보다 오래된 행을 지웁니다. 지운 행 수를 돌려줍니다."""
+    url = f"{config.SUPABASE_URL}/rest/v1/rpc/prune_indicators"
+    resp = requests.post(url, headers=_headers(), json={"keep_days": keep_days}, timeout=300)
+    if resp.status_code >= 300:
+        raise RuntimeError(f"prune_indicators 실패 [{resp.status_code}]: {resp.text[:300]}")
+    return int(resp.json() or 0)
