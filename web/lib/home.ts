@@ -223,8 +223,9 @@ export async function getHomeData(limit = 5): Promise<HomeData | null> {
       up,
       down,
       neutral: judged.length - up - down,
-      upDelta: up - prev.filter((s) => upZone(s.zone_prev)).length,
-      downDelta: down - prev.filter((s) => downZone(s.zone_prev)).length,
+      // 증감은 직전 판정이 있는 같은 종목끼리만 비교(새로 추가된 종목이 '증가'로 잡히지 않게)
+      upDelta: prev.filter((s) => upZone(s.zone)).length - prev.filter((s) => upZone(s.zone_prev)).length,
+      downDelta: prev.filter((s) => downZone(s.zone)).length - prev.filter((s) => downZone(s.zone_prev)).length,
       asOf: judged.reduce<string | null>((m, s) => (s.signal_date && (!m || s.signal_date > m) ? s.signal_date : m), null),
     };
   };

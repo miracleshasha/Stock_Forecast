@@ -69,9 +69,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS mv_home_stats_ticker ON mv_home_stats (ticker)
 REVOKE ALL ON mv_home_stats FROM anon, authenticated;
 GRANT SELECT ON mv_home_stats TO service_role;
 
+-- 2026-10-24: CONCURRENTLY 는 새·옛 행을 한 줄씩 비교해(jsonb 포함) 974종목에서 3.5초 이상 걸려
+-- API 8초 제한(authenticator)에 걸렸습니다. 일반 REFRESH 는 0.3초 — 그동안 읽기가 잠깐 기다리지만
+-- 홈은 5분 캐시라 체감되지 않습니다.
 CREATE OR REPLACE FUNCTION refresh_home_stats() RETURNS void
 LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
-  REFRESH MATERIALIZED VIEW CONCURRENTLY mv_home_stats;
+  REFRESH MATERIALIZED VIEW mv_home_stats;
 $$;
 REVOKE ALL ON FUNCTION refresh_home_stats() FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION refresh_home_stats() TO service_role;
