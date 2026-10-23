@@ -10,6 +10,7 @@ export interface StockRowData {
   price: number | null;
   changePct: number | null;
   score: number | null;
+  etf?: boolean;
 }
 
 /** 목록 한 줄: 순위 · 이니셜 · 종목명 · 현재가/등락률 · 점수 배지 */
@@ -35,7 +36,7 @@ export default function StockRow({
       <span className="li__main">
         <span className="li__name">{row.name}</span>
         <span className="li__meta">
-          {row.ticker} · {MARKET_LABEL[row.market] ?? row.market}
+          {row.ticker} · {row.etf ? "ETF" : MARKET_LABEL[row.market] ?? row.market}
         </span>
       </span>
       <span className="li__px">

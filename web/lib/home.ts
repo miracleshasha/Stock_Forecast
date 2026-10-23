@@ -24,6 +24,8 @@ export interface HomeRow {
   changePct: number | null;
   score: number | null;
   zone: Zone | null;
+  /** ETF 여부(목록에 'ETF' 표시) */
+  etf?: boolean;
 }
 
 /** 목록 행 + 부가 수치(12개월 수익률, 거래량 배수 등) */
@@ -43,9 +45,10 @@ export interface Breadth {
 
 export interface HomeData {
   breadth: { KR: Breadth; US: Breadth };
-  top: Record<Region, { buys: HomeRow[]; sells: HomeRow[] }>;
+  /** 상승/하락 흐름 목록 — ALL/KR/US 는 개별 종목만, ETF 는 따로 */
+  top: Record<Region | "ETF", { buys: HomeRow[]; sells: HomeRow[] }>;
   /** 12-1개월 모멘텀 상위 (value = 수익률 %) */
-  momentum: { KR: RankedRow[]; US: RankedRow[] };
+  momentum: { KR: RankedRow[]; US: RankedRow[]; ETF: RankedRow[] };
   /** 52주 신고가·신저가, 거래량 급증 (value = 거래량 배수) */
   movers: { highs: HomeRow[]; lows: HomeRow[]; volume: RankedRow[] };
   /** ⑥ 업종별 흐름 (3종목 이상인 업종만, 평균 점수 높은 순) */
@@ -144,8 +147,8 @@ function cachedQuery<A extends unknown[], T>(key: string, fn: (sb: SupabaseClien
 }
 
 const qHomeStats = cachedQuery("home-stats-v2", (sb) => sb.from("mv_home_stats").select("*").limit(5000));
-const qHomeSymbols = cachedQuery("home-symbols-v1", (sb) =>
-  sb.from("symbols").select("ticker, name_ko, name_en, currency, sector").limit(5000));
+const qHomeSymbols = cachedQuery("home-symbols-v2", (sb) =>
+  sb.from("symbols").select("ticker, name_ko, name_en, currency, sector, kind").limit(5000));
 const qKospi = cachedQuery("home-kospi-v1", (sb) =>
   sb.from("daily_macro").select("trade_date, kospi_close").not("kospi_close", "is", null)
     .order("trade_date", { ascending: false }).limit(30));
@@ -200,10 +203,15 @@ export async function getHomeData(limit = 5): Promise<HomeData | null> {
       changePct: s.close != null && s.prev_close ? (s.close / s.prev_close - 1) * 100 : null,
       score: s.score,
       zone: s.zone,
+      etf: n?.kind === "etf",
     };
   };
   const byTicker = new Map(stats.map((s) => [s.ticker, toRow(s)]));
-  const inRegion = (r: "KR" | "US") => stats.filter((s) => regionOf(s.market) === r);
+  // 시장 분위기·업종·순위 등 집계는 개별 종목만. ETF 는 따로 목록을 만듭니다(2026-10 ETF 추가).
+  const isEtf = (s: Stat) => names.get(s.ticker)?.kind === "etf";
+  const stocks = stats.filter((s) => !isEtf(s));
+  const etfs = stats.filter(isEtf);
+  const inRegion = (r: "KR" | "US") => stocks.filter((s) => regionOf(s.market) === r);
 
   // ① 시장 분위기
   const breadthOf = (rows: Stat[]): Breadth => {
@@ -245,7 +253,7 @@ export async function getHomeData(limit = 5): Promise<HomeData | null> {
     const r = regionOf(s.market);
     if (!latestDate.has(r) || s.trade_date > latestDate.get(r)!) latestDate.set(r, s.trade_date);
   }
-  const fresh = stats.filter((s) => s.trade_date === latestDate.get(regionOf(s.market)));
+  const fresh = stocks.filter((s) => s.trade_date === latestDate.get(regionOf(s.market)));
   const byChange = (a: HomeRow, b: HomeRow) => Math.abs(b.changePct ?? 0) - Math.abs(a.changePct ?? 0);
   const highs = fresh.filter((s) => s.high != null && s.hi52 != null && s.high >= s.hi52).map(toRow).sort(byChange);
   const lows = fresh.filter((s) => s.low != null && s.lo52 != null && s.low <= s.lo52).map(toRow).sort(byChange);
@@ -306,8 +314,8 @@ export async function getHomeData(limit = 5): Promise<HomeData | null> {
     bbByTicker: new Map(
       stats.map((s) => [s.ticker, bbEventsOf(s)] as const).filter(([, ev]) => ev.length > 0),
     ),
-    top: { ALL: topOf(stats), KR: topOf(inRegion("KR")), US: topOf(inRegion("US")) },
-    momentum: { KR: momentumOf(inRegion("KR")), US: momentumOf(inRegion("US")) },
+    top: { ALL: topOf(stocks), KR: topOf(inRegion("KR")), US: topOf(inRegion("US")), ETF: topOf(etfs) },
+    momentum: { KR: momentumOf(inRegion("KR")), US: momentumOf(inRegion("US")), ETF: momentumOf(etfs) },
     movers: { highs, lows, volume },
     byTicker,
   };

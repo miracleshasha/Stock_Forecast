@@ -2,7 +2,7 @@
 // SignalDesk — shared types
 // ============================================================
 
-export type Market = "KOSPI" | "KOSDAQ" | "NASDAQ" | "NYSE";
+export type Market = "KOSPI" | "KOSDAQ" | "NASDAQ" | "NYSE" | "AMEX";
 export type Currency = "KRW" | "USD";
 
 export type Zone =

@@ -66,6 +66,7 @@ export default async function HomePage() {
   const momentumTabs: ListTab[] = [
     { key: "KR", label: "국내", items: home.momentum.KR.map((r) => ({ row: r, badge: pctBadge(r) })) },
     { key: "US", label: "미국", items: home.momentum.US.map((r) => ({ row: r, badge: pctBadge(r) })) },
+    { key: "ETF", label: "ETF", items: home.momentum.ETF.map((r) => ({ row: r, badge: pctBadge(r) })) },
   ];
 
   const moverTabs: ListTab[] = [
@@ -133,6 +134,7 @@ export default async function HomePage() {
     { key: "ALL", label: "전체", items: plain(home.top.ALL[pick]) },
     { key: "KR", label: "국내", items: plain(home.top.KR[pick]) },
     { key: "US", label: "해외", items: plain(home.top.US[pick]) },
+    { key: "ETF", label: "ETF", items: plain(home.top.ETF[pick]) },
   ];
 
   return (

@@ -94,6 +94,7 @@ export const MARKET_LABEL: Record<Market, string> = {
   KOSDAQ: "코스닥",
   NASDAQ: "나스닥",
   NYSE: "뉴욕",
+  AMEX: "아멕스",
 };
 
 /** "2026-09-23" → "9월 23일" */
