@@ -20,6 +20,7 @@ export default function StockHeader({
         <div>
           <h1 className="sym__name">{name}</h1>
           <div className="sym__meta">
+            {symbol.kind === "etf" && <span className="sym__etf">ETF</span>}
             {symbol.ticker} · {MARKET_LABEL[symbol.market] ?? symbol.market}
           </div>
         </div>

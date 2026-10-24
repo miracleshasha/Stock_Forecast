@@ -19,6 +19,8 @@ export interface Symbol {
   nameKo: string | null;
   nameEn: string | null;
   currency: Currency;
+  /** 'etf' 면 화면에 ETF 표시 (symbols.kind, 2026-10 추가) */
+  kind?: "stock" | "etf";
 }
 
 export interface SearchResult {

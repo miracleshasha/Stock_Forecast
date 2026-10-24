@@ -27,6 +27,7 @@ function mapSymbol(row: Record<string, unknown>): Symbol {
     nameKo: (row.name_ko as string) ?? null,
     nameEn: (row.name_en as string) ?? null,
     currency: (row.currency as "KRW" | "USD") ?? "KRW",
+    kind: row.kind === "etf" ? "etf" : "stock",
   };
 }
 
@@ -122,7 +123,7 @@ export async function getSymbol(ticker: string): Promise<Symbol | null> {
   if (!sb) return null;
   const { data } = await sb
     .from("symbols")
-    .select("ticker, market, name_ko, name_en, currency")
+    .select("ticker, market, name_ko, name_en, currency, kind")
     .eq("ticker", ticker)
     .maybeSingle();
   return data ? mapSymbol(data) : null;

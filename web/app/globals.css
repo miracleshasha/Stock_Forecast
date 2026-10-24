@@ -616,3 +616,7 @@ button { font-family: inherit; color: inherit; }
 .alert__desc { font-size: 13px; color: var(--sub); word-break: keep-all; }
 .alert__ev { font-size: 12px; color: var(--cap); word-break: keep-all; }
 .alert__ev--strong { color: var(--ink); font-weight: 600; }
+.sym__etf {
+  display: inline-block; margin-right: 6px; padding: 1px 6px; border-radius: 6px; vertical-align: 1px;
+  font-size: 12px; font-weight: 700; color: var(--ink); background: var(--soft);
+}
