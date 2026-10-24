@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import LogoutButton from "@/components/LogoutButton";
+import PasswordChange from "@/components/PasswordChange";
 import { emailToPhone, getSessionUser } from "@/lib/auth";
 import { formatPhone } from "@/lib/phone";
 
@@ -32,6 +33,9 @@ export default async function AccountPage() {
           <span>가입일</span>
           <span>{joined}</span>
         </div>
+      </section>
+      <section className="card">
+        <PasswordChange />
       </section>
       <section className="card">
         <p className="sec-desc">

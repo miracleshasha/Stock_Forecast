@@ -84,6 +84,42 @@ export async function signIn(phone: string, password: string): Promise<AuthResul
   return { ok: true, session: data.session };
 }
 
+/**
+ * 비밀번호 변경(로그인한 사용자). 현재 비밀번호로 다시 확인한 뒤 바꾸고,
+ * 새 비밀번호로 이 기기의 세션을 새로 받으며 다른 기기의 로그인은 끊습니다.
+ */
+export async function changePassword(current: string, next: string): Promise<AuthResult> {
+  const user = await getSessionUser();
+  if (!user) return { ok: false, status: 401, message: "로그인이 필요해요." };
+  const phone = String(user.user_metadata?.phone ?? user.email?.split("@")[0] ?? "");
+
+  const check = await signIn(phone, current);
+  if (!check.ok) {
+    return check.status === 401
+      ? { ok: false, status: 400, message: "현재 비밀번호가 맞지 않아요." }
+      : check;
+  }
+  if (current === next) return { ok: false, status: 400, message: "지금과 다른 비밀번호를 써 주세요." };
+
+  const { error } = await authClient().auth.admin.updateUserById(user.id, { password: next });
+  if (error) {
+    if (error.code === "weak_password") {
+      return { ok: false, status: 400, message: "비밀번호가 너무 단순해요. 다른 비밀번호를 써 주세요." };
+    }
+    console.error("[auth] changePassword", error.code, error.message);
+    return { ok: false, status: 500, message: "비밀번호를 바꾸지 못했어요. 잠시 뒤 다시 시도해 주세요." };
+  }
+
+  const fresh = await signIn(phone, next);
+  if (fresh.ok) {
+    // 다른 기기(옛 비밀번호로 로그인된 세션)는 로그아웃 — 실패해도 변경 자체는 완료
+    await authClient().auth.admin.signOut(fresh.session.access_token, "others").catch((e) =>
+      console.warn("[auth] signOut others failed", e),
+    );
+  }
+  return fresh;
+}
+
 /** 리프레시 토큰으로 새 세션. 만료·폐기된 토큰이면 null. */
 export async function refresh(refreshToken: string): Promise<Session | null> {
   const { data, error } = await authClient().auth.refreshSession({ refresh_token: refreshToken });
