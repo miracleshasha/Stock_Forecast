@@ -25,10 +25,10 @@ export default function TopBar({ who }: { who: string | null }) {
             <Icon name="back" />
           </button>
         ) : (
-          <Link href="/" className="brand" aria-label="시그널데스크 홈">
+          <Link href="/" className="brand" aria-label="My_Stock_Weather 홈">
             <BrandMark />
             <span aria-hidden>
-              <span className="brand__sig">시그널</span>데스크
+              My_Stock_<span className="brand__sig">Weather</span>
             </span>
           </Link>
         )}

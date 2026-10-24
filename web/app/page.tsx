@@ -139,7 +139,7 @@ export default async function HomePage() {
 
   return (
     <main className="shell">
-      <h1 className="sr-only">시그널데스크 — 종목 차트 흐름 요약</h1>
+      <h1 className="sr-only">My_Stock_Weather — 종목 차트 흐름 요약</h1>
       <FavAlerts alerts={favAlerts} stats={alertStats} />
       <SearchBox />
 

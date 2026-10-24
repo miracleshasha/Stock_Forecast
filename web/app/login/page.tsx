@@ -22,10 +22,10 @@ export default async function LoginPage({
   return (
     <main className="shell">
       <div className="intro">
-        <div className="intro__brand" aria-label="시그널데스크">
+        <div className="intro__brand" aria-label="My_Stock_Weather">
           <BrandMark size={56} />
           <span className="intro__name" aria-hidden>
-            <span className="brand__sig">시그널</span>데스크
+            My_Stock_<span className="brand__sig">Weather</span>
           </span>
         </div>
         <p className="intro__t">
