@@ -22,10 +22,10 @@ export default async function LoginPage({
   return (
     <main className="shell">
       <div className="intro">
-        <div className="intro__brand" aria-label="My_Stock_Weather">
+        <div className="intro__brand" aria-label="주가예보">
           <BrandMark size={56} />
           <span className="intro__name" aria-hidden>
-            My_Stock_<span className="brand__sig">Weather</span>
+            주가<span className="brand__sig">예보</span>
           </span>
         </div>
         <p className="intro__t">

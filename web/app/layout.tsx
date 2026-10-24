@@ -8,7 +8,7 @@ import SearchSheetProvider from "@/components/SearchSheet";
 import { getDisplayWho } from "@/lib/auth";
 
 export const metadata: Metadata = {
-  title: "My_Stock_Weather",
+  title: "주가예보",
   description:
     "종목을 검색하면 지금 차트가 어떤 흐름인지 추세·모멘텀·밴드·거래량을 하나의 점수로 요약해 보여드려요.",
 };
