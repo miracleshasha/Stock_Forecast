@@ -50,7 +50,7 @@ REQUEST_DELAY_SEC = float(_get("REQUEST_DELAY_SEC", "0.2"))
 #
 # DB에서 읽어올 워밍업 행수. MA120 + OBV 20일 추세 + MACD(EMA26) 수렴을 위해
 # 최소 200 이상 권장. 클수록 지표가 전량 재조회 결과에 가까워집니다.
-WARMUP_ROWS = int(_get("WARMUP_ROWS", "250"))
+WARMUP_ROWS = int(_get("WARMUP_ROWS", "270"))
 
 # 증분 조회 시 최소로 요청할 행수(휴장 연휴 등으로 갭이 0에 가까울 때의 하한).
 MIN_INCREMENTAL_ROWS = int(_get("MIN_INCREMENTAL_ROWS", "5"))

@@ -621,3 +621,26 @@ button { font-family: inherit; color: inherit; }
   font-size: 12px; font-weight: 700; color: var(--ink); background: var(--soft);
 }
 .px__live--close { color: var(--ink); background: var(--soft); }
+
+/* ---------- N일 뒤 전망 ---------- */
+.outlook { list-style: none; display: flex; flex-direction: column; }
+.outlook__row { display: flex; flex-direction: column; gap: 8px; padding: 14px 0; }
+.outlook__row + .outlook__row { border-top: 1px solid var(--line); }
+.outlook__top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.outlook__h { font-size: 15px; font-weight: 600; color: var(--ink); }
+.outlook__p { font-size: 13px; color: var(--cap); }
+.outlook__p b { font-size: 18px; font-weight: 700; color: var(--ink); margin-left: 4px; }
+.outlook__p b.up { color: var(--up); }
+.outlook__p b.down { color: var(--down); }
+.outlook__base { font-size: 12px; color: var(--faint); }
+.outlook__bar { position: relative; height: 10px; border-radius: 5px; background: var(--soft); }
+.outlook__seg { position: absolute; top: 0; bottom: 0; }
+.outlook__seg--down { background: #9DB8EA; border-radius: 5px 0 0 5px; }
+.outlook__seg--up { background: #F0A3AA; border-radius: 0 5px 5px 0; }
+.outlook__zero { position: absolute; left: 50%; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--ink); opacity: .35; z-index: 1; }
+.outlook__mid { position: absolute; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: var(--ink); border: 2px solid var(--card); z-index: 2; }
+.outlook__range { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; font-size: 14px; font-weight: 600; }
+.outlook__dots { color: var(--faint); font-weight: 400; }
+.outlook__px { font-size: 12px; font-weight: 400; color: var(--cap); margin-left: auto; }
+.outlook__why { font-size: 12px; color: var(--sub); word-break: keep-all; }
+.outlook__note { word-break: keep-all; margin-top: 4px; }

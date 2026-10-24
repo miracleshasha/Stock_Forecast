@@ -12,6 +12,8 @@ import type {
   Indicators,
   Macro,
   Market,
+  Outlook,
+  OutlookHorizon,
   PatternStat,
   SearchResult,
   Signal,
@@ -537,6 +539,80 @@ export const getPatternStats = unstable_cache(
   },
   ["pattern-stats-v1"],
   { revalidate: 3600 },
+);
+
+// ---------- N일 뒤 전망 ----------
+interface OutlookModelRow {
+  horizon: number;
+  enabled: boolean;
+  wf: OutlookHorizon["wf"];
+  rangeWf: OutlookHorizon["rangeWf"];
+}
+
+/** 시장별 방향·범위 모델의 게이트와 검증 성적. 주 1회 바뀌므로 1시간 캐시. */
+const getOutlookModels = unstable_cache(
+  async (region: "KR" | "US"): Promise<OutlookModelRow[]> => {
+    const sb = getSupabase();
+    if (!sb) return [];
+    const { data } = await sb.from("direction_models").select("horizon,enabled,wf,range_wf").eq("region", region);
+    return (data ?? []).map((r) => {
+      const wf = r.wf as Record<string, unknown> | null;
+      const rw = r.range_wf as Record<string, unknown> | null;
+      return {
+        horizon: Number(r.horizon),
+        enabled: Boolean(r.enabled),
+        wf: wf
+          ? {
+              skill: Number(wf.skill),
+              skillSe: Number(wf.skill_se),
+              csAuc: wf.cs_auc != null ? Number(wf.cs_auc) : null,
+              from: String(wf.from ?? ""),
+              to: String(wf.to ?? ""),
+            }
+          : null,
+        rangeWf: rw ? { coverage: Number(rw.coverage), pinballSkill: Number(rw.pinball_skill) } : null,
+      };
+    });
+  },
+  ["outlook-models-v1"],
+  { revalidate: 3600 },
+);
+
+/** 종목의 최신 N일 뒤 전망(5·10·20거래일). 배치가 하루 한 번 갱신하므로 5분 캐시. */
+export const getOutlook = unstable_cache(
+  async (ticker: string, region: "KR" | "US"): Promise<Outlook | null> => {
+    const sb = getSupabase();
+    if (!sb) return null;
+    const [{ data }, models] = await Promise.all([
+      sb.from("direction_latest").select("*").eq("ticker", ticker).maybeSingle(),
+      getOutlookModels(region),
+    ]);
+    if (!data) return null;
+    const num = (v: unknown) => (v == null ? null : Number(v));
+    const drivers = (data.drivers ?? {}) as Record<string, [string, number, number][]>;
+    const horizons: OutlookHorizon[] = [];
+    for (const h of [5, 10, 20]) {
+      const p = num(data[`p${h}`]);
+      const base = num(data[`base${h}`]);
+      if (p == null || base == null) continue;
+      const m = models.find((x) => x.horizon === h);
+      horizons.push({
+        h,
+        p,
+        base,
+        lo: num(data[`lo${h}`]),
+        mid: num(data[`mid${h}`]),
+        hi: num(data[`hi${h}`]),
+        drivers: drivers[String(h)] ?? [],
+        enabled: m?.enabled ?? false,
+        wf: m?.wf ?? null,
+        rangeWf: m?.rangeWf ?? null,
+      });
+    }
+    return horizons.length ? { asOf: data.trade_date as string, horizons } : null;
+  },
+  ["outlook-v1"],
+  { revalidate: 300 },
 );
 
 // ---------- 단기 신호: 패턴 차트용 최근 봉 ----------

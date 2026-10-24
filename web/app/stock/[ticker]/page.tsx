@@ -8,7 +8,8 @@ import SetupNotice from "@/components/SetupNotice";
 import Icon from "@/components/Icon";
 import NewsCard from "@/components/NewsCard";
 import ShortTermCard from "@/components/ShortTermCard";
-import { getIndicators, getMacro, getPatternStats, getRecentCandles, getStock, getStockExtras } from "@/lib/db";
+import OutlookCard from "@/components/OutlookCard";
+import { getIndicators, getMacro, getOutlook, getPatternStats, getRecentCandles, getStock, getStockExtras } from "@/lib/db";
 import { formatDateKo } from "@/lib/format";
 import { getInitialQuote } from "@/lib/liveQuote";
 import { getStockNews } from "@/lib/news";
@@ -40,7 +41,7 @@ export default async function StockPage({
   const newsName = stock.symbol.nameKo || stock.symbol.nameEn || stock.symbol.ticker;
   const region = stock.symbol.market === "KOSPI" || stock.symbol.market === "KOSDAQ" ? "KR" : "US";
   const st = stock.signal?.shortTerm;
-  const [indicators, macro, extras, news, initialQuote, patternStats, recentCandles] = await Promise.all([
+  const [indicators, macro, extras, news, initialQuote, patternStats, recentCandles, outlook] = await Promise.all([
     indicatorsP,
     macroP,
     getStockExtras(stock.symbol.ticker, stock.symbol.market),
@@ -52,6 +53,7 @@ export default async function StockPage({
     st && st.patterns.length > 0 && stock.signal?.asOf
       ? getRecentCandles(stock.symbol.ticker, stock.signal.asOf, 12).catch(() => [])
       : Promise.resolve([]),
+    getOutlook(stock.symbol.ticker, region).catch(() => null),
   ]);
   const hasSignal = stock.signal && stock.signal.zone !== "UNAVAILABLE";
 
@@ -69,6 +71,14 @@ export default async function StockPage({
           이 종목의 최신 종가는 <b>{formatDateKo(stock.price.asOf)}</b> 기준이에요.
         </p>
       )}
+
+      <OutlookCard
+        outlook={outlook}
+        close={stock.price?.close ?? null}
+        closeAsOf={stock.price?.asOf ?? null}
+        currency={stock.symbol.currency}
+        marketLabel={region === "KR" ? "국내 종목" : "미국 종목"}
+      />
 
       <VerdictCard signal={stock.signal} />
 

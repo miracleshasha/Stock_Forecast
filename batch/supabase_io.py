@@ -171,3 +171,29 @@ def prune_indicators(keep_days: int) -> int:
     if resp.status_code >= 300:
         raise RuntimeError(f"prune_indicators 실패 [{resp.status_code}]: {resp.text[:300]}")
     return int(resp.json() or 0)
+
+
+def select(table: str, params: dict) -> list[dict]:
+    """일반 조회. 1000행 캡을 넘을 수 있으면 limit/offset 으로 끝까지 받습니다."""
+    url = f"{config.SUPABASE_URL}/rest/v1/{table}"
+    out: list[dict] = []
+    offset = 0
+    while True:
+        p = {**params, "limit": "1000", "offset": str(offset)}
+        resp = requests.get(url, headers=_headers(), params=p, timeout=60)
+        resp.raise_for_status()
+        rows = resp.json()
+        out.extend(rows)
+        if len(rows) < 1000:
+            return out
+        offset += 1000
+
+
+def patch_open_membership(index_name: str, ticker: str, valid_to: str):
+    """universe_membership 의 열린 구간(valid_to IS NULL)을 닫습니다."""
+    url = f"{config.SUPABASE_URL}/rest/v1/universe_membership"
+    params = {"index_name": f"eq.{index_name}", "ticker": f"eq.{ticker}", "valid_to": "is.null"}
+    resp = requests.patch(url, headers=_headers({"prefer": "return=minimal"}), params=params,
+                          json={"valid_to": valid_to}, timeout=30)
+    if resp.status_code >= 300:
+        raise RuntimeError(f"구성종목 편출 기록 실패 [{resp.status_code}]: {resp.text[:300]}")

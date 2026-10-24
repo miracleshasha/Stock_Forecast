@@ -188,3 +188,28 @@ export interface FavoriteItem {
   market: Market;
   addedAt: number;
 }
+
+/** N일 뒤 전망 (batch/direction_model.py) — 한 기간(5·10·20거래일) */
+export interface OutlookHorizon {
+  h: number;
+  /** N거래일 뒤 종가가 오늘보다 높을 확률(0~1). 모델이 꺼진 기간이면 base 와 같음 */
+  p: number;
+  /** 같은 시장 종목이 N거래일 뒤 오른 평균 비율 */
+  base: number;
+  /** N거래일 뒤 수익률 10%·50%·90% 분위(소수, 예: -0.05) — lo~hi 가 80% 구간 */
+  lo: number | null;
+  mid: number | null;
+  hi: number | null;
+  /** 모델이 켜진 기간만: [피처, 로짓 기여, 피처 수준 부호] */
+  drivers: [string, number, number][];
+  /** 이 기간 방향 모델이 검증을 통과해 켜져 있는지 */
+  enabled: boolean;
+  /** 워크포워드 검증 성적 */
+  wf: { skill: number; skillSe: number; csAuc: number | null; from: string; to: string } | null;
+  rangeWf: { coverage: number; pinballSkill: number } | null;
+}
+
+export interface Outlook {
+  asOf: string;
+  horizons: OutlookHorizon[];
+}

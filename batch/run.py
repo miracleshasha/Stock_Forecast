@@ -46,6 +46,10 @@ import patterns
 import scoring
 import supabase_io
 
+# 이번 실행에서 처리한 종목의 일봉(워밍업+신규). 배치 끝에 N일 뒤 전망을 한꺼번에 계산합니다
+# (같은 날 종목 간 순위가 필요해 종목별로 따로 낼 수 없음).
+_FRAMES: dict[str, tuple[str, pd.DataFrame]] = {}
+
 
 def _clean(v):
     if v is None:
@@ -207,6 +211,9 @@ def process_symbol(sym: dict, macro: dict, full: bool = False) -> bool:
     if hist:
         _align_obv(ticker, df, anchor_date)
 
+    _FRAMES[ticker] = ("KR" if currency == "KRW" else "US",
+                       df[["date", "open", "high", "low", "close", "volume"]])
+
     # 5) 스코어링 (매크로가 매일 바뀌므로 새 거래일이 없어도 판정은 갱신)
     index_ret20 = macro.get("_kospi_ret20") if currency == "KRW" else None
     sig = scoring.score_signal(df, macro, market, currency, index_ret20)
@@ -326,6 +333,27 @@ def main(argv: list[str]):
                 pattern_backtest.run(fresh=True, save=True)
         except Exception as e:  # noqa: BLE001
             print(f"  [경고] 부가 데이터 수집 실패: {e}")
+        # N일 뒤 전망(방향 확률·범위). 전량 배치는 방금 새로 받은 가격 캐시로 재검증·재학습까지,
+        # 평일 증분은 저장된 모델로 최신 예측만. 새 종목만 채우는 --missing 은 건너뜁니다.
+        if not missing_only:
+            try:
+                import direction_model
+                if full:
+                    print("N일 뒤 전망 모델 재검증·학습…")
+                    direction_model.run_weekly()
+                else:
+                    n = direction_model.run_daily(_FRAMES)
+                    print(f"N일 뒤 전망 갱신: {n}종목")
+            except Exception as e:  # noqa: BLE001
+                print(f"  [경고] N일 뒤 전망 실패: {e}")
+        # 지수 구성종목 변경 이력(생존편향 보정용) — 그 배치가 다룬 시장의 지수만
+        try:
+            import membership
+            kr = any(s.get("currency", "KRW") == "KRW" for s in symbols)
+            us = any(s.get("currency", "KRW") != "KRW" for s in symbols)
+            membership.snapshot(tuple((["KOSPI200", "KOSDAQ150"] if kr else []) + (["SP500"] if us else [])))
+        except Exception as e:  # noqa: BLE001
+            print(f"  [경고] 구성종목 기록 실패: {e}")
 
     # 오래된 지표 정리(주 1회 전량 배치 때) — 보관 기간이 지난 행 삭제
     if full and ok:
