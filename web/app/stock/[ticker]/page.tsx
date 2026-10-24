@@ -11,6 +11,7 @@ import ShortTermCard from "@/components/ShortTermCard";
 import OutlookCard from "@/components/OutlookCard";
 import { getIndicators, getMacro, getOutlook, getPatternStats, getRecentCandles, getStock, getStockExtras } from "@/lib/db";
 import { formatDateKo } from "@/lib/format";
+import { isBeta } from "@/lib/beta";
 import { getInitialQuote } from "@/lib/liveQuote";
 import { getStockNews } from "@/lib/news";
 import { isSupabaseConfigured } from "@/lib/supabase";
@@ -35,6 +36,7 @@ export default async function StockPage({
   // 종목명·시장이 필요 없는 조회는 getStock 과 함께 먼저 시작합니다
   const indicatorsP = getIndicators(ticker);
   const macroP = getMacro();
+  const betaP = isBeta();
   const stock = await getStock(ticker);
   if (!stock) notFound();
 
@@ -53,7 +55,8 @@ export default async function StockPage({
     st && st.patterns.length > 0 && stock.signal?.asOf
       ? getRecentCandles(stock.symbol.ticker, stock.signal.asOf, 12).catch(() => [])
       : Promise.resolve([]),
-    getOutlook(stock.symbol.ticker, region).catch(() => null),
+    // N일 뒤 전망은 베타(허락한 사용자만) — 명단 밖이면 조회도 하지 않습니다
+    betaP.then((beta) => (beta ? getOutlook(stock.symbol.ticker, region).catch(() => null) : null)),
   ]);
   const hasSignal = stock.signal && stock.signal.zone !== "UNAVAILABLE";
 
