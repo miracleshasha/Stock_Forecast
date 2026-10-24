@@ -24,3 +24,6 @@ web/.vercel/
 # 예시 템플릿은 커밋합니다 (git add -f 로 강제 포함)
 !batch/.env.example
 !web/.env.local.example
+
+# Private research exports must never enter the public source repository.
+/web/lib/generated/
