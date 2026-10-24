@@ -367,6 +367,8 @@ export interface FavoriteRow {
   changePct: number | null;
   score: number | null;
   zone: Zone | null;
+  /** ETF 여부(목록에 'ETF' 표시) */
+  etf: boolean;
   /** 볼린저 밴드 통과(관심 종목 알림). 없으면 빈 배열 */
   bb: BbEvent[];
   /** bb 이벤트별 실측(같은 시장) — 알림의 근거 한 줄용 */
@@ -378,7 +380,7 @@ export async function getFavoriteRows(tickers: string[]): Promise<FavoriteRow[]>
   if (!sb || tickers.length === 0) return [];
 
   const [symRes, sigRes, quotes, statRows] = await Promise.all([
-    sb.from("symbols").select("ticker, market, name_ko, name_en, currency").in("ticker", tickers),
+    sb.from("symbols").select("ticker, market, name_ko, name_en, currency, kind").in("ticker", tickers),
     latestSignals(tickers),
     getLatestQuotes(tickers),
     getHomeStatRows().catch(() => []),
@@ -417,6 +419,7 @@ export async function getFavoriteRows(tickers: string[]): Promise<FavoriteRow[]>
       changePct: qt?.changePct ?? null,
       score: sig?.score ?? null,
       zone: sig?.zone ?? null,
+      etf: r.kind === "etf",
       bb,
       bbStats,
     };
