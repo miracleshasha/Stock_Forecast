@@ -70,7 +70,14 @@ export default function LiveQuote({
       <span className={`px__chg num ${tone}`}>
         {formatChange(change, changePct, currency)}
       </span>
-      {live ? (
+      {live && res?.phase === "after_close" ? (
+        // 장 마감 후 배치 전: 그날 종가(판정 점수는 배치 뒤에 바뀜)
+        <span className="px__asof">
+          <span className="px__live px__live--close">오늘 종가</span>
+          {res.sessionDate ? `${formatDateKo(res.sessionDate)} · ` : ""}
+          판정은 {currency === "KRW" ? "저녁 7시쯤" : "다음 날 아침"} 반영돼요
+        </span>
+      ) : live ? (
         <span className="px__asof">
           <span className="px__live">실시간</span>
           {new Date(live.fetchedAt).toLocaleTimeString("ko-KR", {

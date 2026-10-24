@@ -46,3 +46,34 @@ export function isMarketOpen(currency: Currency, at: Date = new Date()): boolean
   }
   return inSession("America/New_York", 9 * 60 + 30, 16 * 60, at); // 09:30~16:00 ET
 }
+
+// ---------- 장 단계 (2026-10: 장 마감 후 '오늘 종가' 표시용) ----------
+export type MarketPhase = "open" | "after_close" | "closed";
+
+const SESSION: Record<Currency, { tz: string; open: number; close: number }> = {
+  KRW: { tz: "Asia/Seoul", open: 9 * 60, close: 15 * 60 + 30 },
+  USD: { tz: "America/New_York", open: 9 * 60 + 30, close: 16 * 60 },
+};
+
+/**
+ * open = 장중, after_close = 평일 장 마감 뒤 같은 날(현지) 자정까지, closed = 그 외(장 전·주말).
+ * after_close 동안은 '오늘 종가'를 보여주고, 배치가 오늘 종가를 DB 에 넣으면 그 값을 씁니다.
+ */
+export function marketPhase(currency: Currency, at: Date = new Date()): MarketPhase {
+  const s = SESSION[currency];
+  const { day, minutes } = zoned(s.tz, at);
+  if (day === 0 || day === 6) return "closed";
+  if (minutes >= s.open && minutes <= s.close) return "open";
+  if (minutes > s.close) return "after_close";
+  return "closed";
+}
+
+/** 그 시장 현지 기준 오늘 날짜(YYYY-MM-DD) */
+export function marketToday(currency: Currency, at: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: SESSION[currency].tz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(at);
+}

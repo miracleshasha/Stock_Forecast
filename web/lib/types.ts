@@ -62,6 +62,10 @@ export interface QuoteResponse {
   marketOpen: boolean;
   quote: LiveQuote | null;
   reason?: QuoteSkipReason;
+  /** open = 장중 실시간, after_close = 장 마감 후 배치 전 '오늘 종가' */
+  phase?: "open" | "after_close";
+  /** after_close 일 때 그 시장 현지 기준 오늘 날짜(YYYY-MM-DD) */
+  sessionDate?: string;
 }
 
 /** breakdown: 그룹별 획득 점수 (-100~+100 정규화 기준 기여도) */

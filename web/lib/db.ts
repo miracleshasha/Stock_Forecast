@@ -177,19 +177,19 @@ export async function getStock(ticker: string): Promise<StockResponse | null> {
 }
 
 // ---------- 지표 상세 (S-05) ----------
-/** 마지막으로 확정된 종가(배치가 채운 값). 장중 현재가의 신선도 판정에 씁니다. */
-export async function getLastClose(ticker: string): Promise<number | null> {
+/** 마지막으로 확정된 종가와 그 날짜(배치가 채운 값). 현재가의 신선도·장 마감 후 판정에 씁니다. */
+export async function getLastClose(ticker: string): Promise<{ close: number; date: string } | null> {
   const sb = getSupabase();
   if (!sb) return null;
   const { data, error } = await sb
     .from("daily_prices")
-    .select("close")
+    .select("close, trade_date")
     .eq("ticker", ticker)
     .order("trade_date", { ascending: false })
     .limit(1)
     .maybeSingle();
   if (error || !data?.close) return null;
-  return Number(data.close);
+  return { close: Number(data.close), date: data.trade_date as string };
 }
 
 export async function getIndicators(ticker: string): Promise<Indicators | null> {

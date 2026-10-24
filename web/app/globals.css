@@ -620,3 +620,4 @@ button { font-family: inherit; color: inherit; }
   display: inline-block; margin-right: 6px; padding: 1px 6px; border-radius: 6px; vertical-align: 1px;
   font-size: 12px; font-weight: 700; color: var(--ink); background: var(--soft);
 }
+.px__live--close { color: var(--ink); background: var(--soft); }

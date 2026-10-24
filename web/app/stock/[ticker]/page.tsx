@@ -46,7 +46,7 @@ export default async function StockPage({
     getStockExtras(stock.symbol.ticker, stock.symbol.market),
     getStockNews(newsName, 5),
     // 장중이면 현재가를 먼저 받아 첫 화면부터 실시간 값으로 보여줍니다(장 마감이면 조회 안 함)
-    getInitialQuote(stock.symbol, stock.price?.close ?? null),
+    getInitialQuote(stock.symbol, { close: stock.price?.close ?? null, date: stock.price?.asOf ?? null }),
     getPatternStats(region).catch(() => ({})),
     // 패턴이 있을 때만 차트용 최근 봉을 읽습니다(판정 기준일까지)
     st && st.patterns.length > 0 && stock.signal?.asOf
