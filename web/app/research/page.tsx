@@ -1,6 +1,8 @@
 import "server-only";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { getRankEvaluationReport } from "@/lib/model-research";
+import { isModelResearchOwner } from "@/lib/model-access";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "모델 비교 연구 · 주가예보", robots: { index: false, follow: false } };
@@ -9,7 +11,8 @@ const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
 const pp = (v: number) => `${v > 0 ? "+" : ""}${(v * 100).toFixed(1)}%p`;
 
 export default async function ModelResearchPage() {
-  // 로그인한 회원 모두 볼 수 있습니다(로그인 게이트는 proxy). 보고서는 비공개 Storage에서 서버 전용으로 읽습니다.
+  if (!(await isModelResearchOwner())) notFound();
+  // 권한 확인 후 비공개 Storage에서 서버 전용으로 읽습니다.
   const report = await getRankEvaluationReport();
   if (!report) return <main className="shell"><section className="card"><h1 className="sec-title">모델 비교 연구</h1><p>아직 보고서를 불러오지 못했어요. 잠시 후 다시 확인해 주세요.</p></section></main>;
   const names: Record<string, string> = { technical: "기술 점수", momentum: "12개월 모멘텀", ridge: "선형 순위 모델" };
