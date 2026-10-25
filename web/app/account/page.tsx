@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { canViewModelResearch } from "@/lib/model-access";
 import { redirect } from "next/navigation";
 import LogoutButton from "@/components/LogoutButton";
 import PasswordChange from "@/components/PasswordChange";
@@ -36,13 +35,11 @@ export default async function AccountPage() {
           <span>{joined}</span>
         </div>
       </section>
-      {canViewModelResearch(user) && (
-        <section className="card">
-          <h2 className="sec-title">나만 보는 모델 연구</h2>
-          <p className="sec-desc">비용과 위험을 반영한 20일 종목 순위 모델 비교예요.</p>
-          <Link className="btn" href="/research">모델 비교 결과 보기</Link>
-        </section>
-      )}
+      <section className="card">
+        <h2 className="sec-title">모델 연구</h2>
+        <p className="sec-desc">비용과 위험을 반영한 20일 종목 순위 모델 비교예요.</p>
+        <Link className="btn" href="/research">모델 비교 결과 보기</Link>
+      </section>
       <section className="card">
         <PasswordChange />
       </section>
