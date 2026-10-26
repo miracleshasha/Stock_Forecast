@@ -371,6 +371,16 @@ def main(argv: list[str]):
         except Exception as e:  # noqa: BLE001
             print(f"  [경고] 홈 요약 갱신 실패: {e}")
 
+    # DB 용량 기록(주 1회 전량 배치 때) — 지표 정리·홈 요약까지 끝난 최종 상태를 잽니다.
+    # 한도 도달 시점은 한 번 재서는 알 수 없어 시계열로 추세를 봅니다(db/schema_db_usage.sql).
+    if full and ok:
+        try:
+            import db_usage
+            db_usage.snapshot()
+            db_usage.report(db_usage.history(), db_usage.DEFAULT_LIMIT_MB * db_usage.MB)
+        except Exception as e:  # noqa: BLE001
+            print(f"  [경고] DB 용량 기록 실패: {e}")
+
     if fail and not ok:
         raise SystemExit(1)
 

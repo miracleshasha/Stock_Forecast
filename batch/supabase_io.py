@@ -173,6 +173,16 @@ def prune_indicators(keep_days: int) -> int:
     return int(resp.json() or 0)
 
 
+def record_db_usage() -> dict:
+    """현재 DB 용량을 재서 db_usage 에 한 줄 기록하고, 기록한 값을 돌려줍니다.
+    pg_class 집계를 PostgREST 로 직접 보낼 수 없어 함수로 감싸 둡니다(db/schema_db_usage.sql)."""
+    url = f"{config.SUPABASE_URL}/rest/v1/rpc/record_db_usage"
+    resp = requests.post(url, headers=_headers(), json={}, timeout=60)
+    if resp.status_code >= 300:
+        raise RuntimeError(f"record_db_usage 실패 [{resp.status_code}]: {resp.text[:300]}")
+    return resp.json() or {}
+
+
 def select(table: str, params: dict) -> list[dict]:
     """일반 조회. 1000행 캡을 넘을 수 있으면 limit/offset 으로 끝까지 받습니다."""
     url = f"{config.SUPABASE_URL}/rest/v1/{table}"
