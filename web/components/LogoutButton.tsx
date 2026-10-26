@@ -12,7 +12,7 @@ export default function LogoutButton() {
       await fetch("/api/auth/logout", { method: "POST" });
     } finally {
       resetFavorites();
-      window.location.replace("/login?mode=login");
+      window.location.replace("/");
     }
   }
 

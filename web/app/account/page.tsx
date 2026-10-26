@@ -2,7 +2,6 @@ import Link from "next/link";
 import { canViewModelResearch } from "@/lib/model-access";
 import { redirect } from "next/navigation";
 import LogoutButton from "@/components/LogoutButton";
-import PasswordChange from "@/components/PasswordChange";
 import { emailToPhone, getSessionUser } from "@/lib/auth";
 import { formatPhone } from "@/lib/phone";
 
@@ -32,7 +31,7 @@ export default async function AccountPage() {
           <span className="num">{phone}</span>
         </div>
         <div className="kv">
-          <span>가입일</span>
+          <span>처음 들어온 날</span>
           <span>{joined}</span>
         </div>
       </section>
@@ -44,11 +43,8 @@ export default async function AccountPage() {
         </section>
       )}
       <section className="card">
-        <PasswordChange />
-      </section>
-      <section className="card">
         <p className="sec-desc">
-          즐겨찾기는 계정에 저장돼서 다른 기기에서 로그인해도 그대로 보여요.
+          즐겨찾기는 이 번호에 저장돼서 다른 기기에서 같은 번호를 넣어도 그대로 보여요.
         </p>
         <LogoutButton />
       </section>

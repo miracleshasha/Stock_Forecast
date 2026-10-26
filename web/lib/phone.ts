@@ -24,4 +24,3 @@ export function maskPhone(v: string): string {
   return `${d.slice(0, 3)}-****-${d.slice(-4)}`;
 }
 
-export const PASSWORD_MIN = 6;

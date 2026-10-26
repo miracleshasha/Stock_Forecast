@@ -8,8 +8,12 @@ import {
 } from "@/lib/auth";
 import { peekExp, verifyAccessToken } from "@/lib/jwt";
 
-/** 로그인 없이 열리는 경로 */
-const PUBLIC = [/^\/login$/, /^\/api\/auth\//];
+/**
+ * 전화번호 입력이 필요한 경로. 나머지(홈·종목·뉴스·검색 등)는 누구나 바로 씁니다.
+ * 즐겨찾기 화면과 계정 즐겨찾기 API, 내 정보만 막습니다.
+ * (/research 는 화면에서 지정 계정만 열고 나머지는 404 — 게이트 밖에 둡니다)
+ */
+const PROTECTED = [/^\/favorites(\/|$)/, /^\/account(\/|$)/, /^\/api\/me\//];
 
 async function isValid(token: string | undefined): Promise<boolean> {
   if (!token) return false;
@@ -26,7 +30,7 @@ async function isValid(token: string | undefined): Promise<boolean> {
 function denied(req: NextRequest): NextResponse {
   const { pathname, search } = req.nextUrl;
   if (pathname.startsWith("/api/")) {
-    return NextResponse.json({ message: "로그인이 필요해요." }, { status: 401 });
+    return NextResponse.json({ message: "전화번호를 입력해 주세요." }, { status: 401 });
   }
   const url = req.nextUrl.clone();
   url.pathname = "/login";
@@ -37,13 +41,13 @@ function denied(req: NextRequest): NextResponse {
 }
 
 /**
- * 로그인 게이트 + 자동 로그인.
+ * 자동 로그인 + 즐겨찾기 게이트.
  * 1) 액세스 토큰이 유효하면 통과
  * 2) 없거나 곧 만료면 리프레시 토큰(최대 400일 보관)으로 새로 발급해 통과
- * 3) 둘 다 안 되면 페이지는 /login 으로, API 는 401
+ * 3) 둘 다 안 되면 보호 경로만 막습니다(페이지는 /login, API 는 401). 나머지는 그냥 통과
  */
 export async function proxy(req: NextRequest) {
-  const isPublic = PUBLIC.some((re) => re.test(req.nextUrl.pathname));
+  const isProtected = PROTECTED.some((re) => re.test(req.nextUrl.pathname));
   const at = req.cookies.get(COOKIE.access)?.value;
   const rt = req.cookies.get(COOKIE.refresh)?.value;
 
@@ -63,12 +67,12 @@ export async function proxy(req: NextRequest) {
   }
 
   // 로그인 상태가 아님 — 남은 쿠키 정리
-  const res = isPublic ? NextResponse.next() : denied(req);
+  const res = isProtected ? denied(req) : NextResponse.next();
   if (at || rt || req.cookies.get(COOKIE.who)) clearSessionCookies(res.cookies);
   return res;
 }
 
 export const config = {
-  // 정적 파일만 제외하고 전부(페이지 + 데이터 API) 게이트를 거칩니다
+  // 정적 파일만 제외하고 전부 거칩니다 — 로그인한 사람은 어느 화면에서든 토큰이 갱신되도록
   matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg).*)"],
 };
