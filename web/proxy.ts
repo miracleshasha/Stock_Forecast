@@ -7,6 +7,7 @@ import {
   writeSessionCookies,
 } from "@/lib/auth";
 import { peekExp, verifyAccessToken } from "@/lib/jwt";
+import { corsHeaders, isTossApi } from "@/lib/tossCors";
 
 /**
  * 전화번호 입력이 필요한 경로. 나머지(홈·종목·뉴스·검색 등)는 누구나 바로 씁니다.
@@ -47,6 +48,15 @@ function denied(req: NextRequest): NextResponse {
  * 3) 둘 다 안 되면 보호 경로만 막습니다(페이지는 /login, API 는 401). 나머지는 그냥 통과
  */
 export async function proxy(req: NextRequest) {
+  // 앱인토스 미니앱 API: 로그인 없이 열고(판정 점수 없는 정보만 응답) 미니앱 주소에만 CORS 허용
+  if (isTossApi(req.nextUrl.pathname)) {
+    const headers = corsHeaders(req.headers.get("origin"));
+    if (req.method === "OPTIONS") return new NextResponse(null, { status: 204, headers });
+    const res = NextResponse.next();
+    for (const [k, v] of Object.entries(headers)) res.headers.set(k, v);
+    return res;
+  }
+
   const isProtected = PROTECTED.some((re) => re.test(req.nextUrl.pathname));
   const at = req.cookies.get(COOKIE.access)?.value;
   const rt = req.cookies.get(COOKIE.refresh)?.value;
