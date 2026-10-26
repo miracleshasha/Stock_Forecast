@@ -46,11 +46,7 @@ export default function TopBar({ who }: { who: string | null }) {
             <Link href="/account" className={path === "/account" ? "on" : undefined}>
               내 정보
             </Link>
-          ) : (
-            <Link href="/login" className={path === "/login" ? "on" : undefined}>
-              로그인
-            </Link>
-          )}
+          ) : null}
         </nav>
       </div>
     </header>

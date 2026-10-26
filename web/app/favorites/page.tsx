@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import Icon from "@/components/Icon";
 import FavAlerts, { type FavAlert } from "@/components/home/FavAlerts";
@@ -179,17 +178,9 @@ export default function FavoritesPage() {
 
       {ready && (
         <p className="caption" style={{ textAlign: "center" }}>
-          {inAccount ? (
-            "즐겨찾기가 계정에 저장돼요. 다른 기기에서 로그인해도 그대로 보여요."
-          ) : (
-            <>
-              지금은 이 브라우저에만 저장돼요.{" "}
-              <Link href="/login?next=/favorites" className="linkbtn">
-                로그인
-              </Link>
-              하면 계정에 저장돼요.
-            </>
-          )}
+          {inAccount
+            ? "즐겨찾기가 이 번호에 저장돼요. 다른 기기에서 같은 번호를 넣어도 그대로 보여요."
+            : "서버에 연결하지 못해 지금은 이 브라우저에만 저장돼요. 잠시 뒤 다시 열어 주세요."}
         </p>
       )}
     </main>

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import AuthForm from "@/components/AuthForm";
 import BrandMark from "@/components/BrandMark";
@@ -13,10 +14,10 @@ function safeNext(v: string | undefined): string {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ mode?: string; next?: string }>;
+  searchParams: Promise<{ next?: string }>;
 }) {
-  const { mode, next } = await searchParams;
-  const to = safeNext(next);
+  const { next } = await searchParams;
+  const to = safeNext(next === undefined ? "/favorites" : next);
   if (await getSessionUser()) redirect(to);
 
   return (
@@ -34,11 +35,16 @@ export default async function LoginPage({
           지금 차트 흐름을 한눈에 보여드려요
         </p>
         <p className="sec-desc">
-          추세·모멘텀·밴드·거래량을 하나의 점수로 요약해요. 가입하면 바로 쓸 수 있어요.
+          추세·모멘텀·밴드·거래량을 하나의 점수로 요약해요. 가입 없이 바로 쓸 수 있어요.
         </p>
       </div>
-      {/* 로그인은 자동으로 유지되므로 이 화면을 보는 사람은 대부분 처음 온 사람 → 가입이 기본 */}
-      <AuthForm initialMode={mode === "login" ? "login" : "signup"} next={to} />
+      {/* 앱은 로그인 없이 쓰고, 즐겨찾기·내 정보에 들어갈 때만 이 화면으로 옵니다 */}
+      <AuthForm next={to} />
+      <p className="caption" style={{ textAlign: "center" }}>
+        <Link href="/" className="linkbtn">
+          번호 입력 없이 둘러보기
+        </Link>
+      </p>
     </main>
   );
 }
