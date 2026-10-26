@@ -27,7 +27,10 @@ Stock_Forecast/
 1. [supabase.com](https://supabase.com) 에서 프로젝트 생성.
 2. **SQL Editor** 에서 `db/schema.sql` 전체를 붙여넣고 실행.
 3. 이어서 `db/seed_symbols.sql` 실행 (시작 유니버스 ~39종목 적재).
-4. **Project Settings → API** 에서 아래 값을 확인:
+4. `db/schema_*.sql` 을 파일별로 실행 (기능 추가분 — 용량 추적 `schema_db_usage.sql` 포함).
+   한 번에 다 붙이지 말고 **파일 하나씩** 실행하세요. `VACUUM` 같은 문장을 섞으면
+   SQL Editor 가 전체를 한 트랜잭션으로 묶어 앞의 DDL 까지 롤백합니다.
+5. **Project Settings → API** 에서 아래 값을 확인:
    - `Project URL` → `SUPABASE_URL`
    - `service_role` secret → `SUPABASE_SERVICE_ROLE_KEY` (서버/배치 전용, 노출 금지)
 
@@ -79,6 +82,36 @@ cp .env.example .env      # 값 채우기 (KIS 키 + Supabase)
   > 용량이 더 필요하면: ① `VACUUM FULL daily_indicators` · `daily_prices` (죽은 행 약 5만,
   > 8~10MB — 배타 락이 걸리므로 배치가 안 도는 시간에), ② `daily_prices` 도 보관 일수
   > 상한 적용, ③ `daily_signals` 오래된 행 정리.
+
+### DB 용량 추적 (주 1회, 자동)
+
+한도에 **언제** 닿는지는 한 번 재서는 알 수 없어 시계열을 남깁니다. 토요일 전량 배치가
+끝날 때(지표 정리·홈 요약까지 반영된 최종 상태) `db_usage` 에 한 줄 기록하고, 쌓인
+기록으로 주당 증가량과 도달 예상일을 계산합니다. 주당 1행이라 추적 자체는 1KB 수준입니다.
+
+```bash
+.venv/bin/python db_usage.py            # 측정·기록 + 추세 보고 (전량 배치가 자동 호출)
+.venv/bin/python db_usage.py --report    # 기록하지 않고 쌓인 기록만 보고
+.venv/bin/python db_usage.py --limit 500 # 한도(MB) 지정 — 유료 전환 시 변경
+```
+
+출력 예:
+
+```
+DB 용량: 257.0MB / 500.0MB (51%) — 2026-11-09 기준
+  본문 182.0MB · 인덱스 75.0MB · 활성종목 974개
+  추세: 주당 +8.0MB (측정 3회, 마지막 정리 이후만)
+  한도 도달 예상: 2027-06-09 (약 30주 뒤)
+```
+
+- **마지막으로 용량이 줄어든 측정 이후만** 추세에 씁니다. 인덱스 정리나 행 삭제로 한 번
+  꺾이면(2026-10-26 303MB → 241MB) 그 전까지 묶어 재면 기울기가 음수가 되어 "한도에
+  영원히 안 닿는다"는 잘못된 답이 나옵니다. 20MB 이상 감소를 정리 지점으로 봅니다.
+- `index_bytes` 를 따로 기록하는 이유: 중복 인덱스가 다시 생기면 본문보다 인덱스가 먼저
+  불어나므로 거기서 티어납니다.
+- 측정이 2회 미만이면 추세 없이 현재 용량만 보고합니다. 배치 실패로 한 주 빠져도
+  날짜 간격으로 계산하므로 문제없습니다.
+- 추세 계산 로직은 `batch/test_db_usage.py` 로 검증합니다 (`python -m unittest test_db_usage`).
 
 ### 수집 모드 (하이브리드)
 
