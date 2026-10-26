@@ -57,20 +57,28 @@ cp .env.example .env      # 값 채우기 (KIS 키 + Supabase)
 
   | 값 | 토요일 전량 호출 | 소요 | DB 크기 |
   |---|---|---|---|
-  | **400 (현재)** | **약 4,300회** | **약 40분(추정)** | **302MB 실측 (2026-10-26, 974종목)** |
+  | **400 (현재)** | **약 4,300회** | **약 40분(추정)** | **241MB 실측 (2026-10-26, 974종목)** |
   | 1000 | 약 10,700회(추정) | 약 100분(추정) | 미측정 — 무료 한도 초과 위험 |
 
   > 호출 수는 "국내 5회 / 해외 4회 × 종목 수"(400일 기준)로 계산한 값입니다.
   > 소요 시간과 1000일 행은 400일 실측치를 비례 환산한 **추정**이므로 확인이 필요합니다.
 
-  > ⚠️ Supabase 무료 플랜 DB 한도가 **500MB**이고 현재 **302MB(60%)** 입니다.
+  > ⚠️ Supabase 무료 플랜 DB 한도가 **500MB**이고 현재 **241MB(48%)** 입니다.
   > `daily_indicators` 는 `INDICATOR_KEEP_DAYS`(400) 로 잘라 보관하지만,
   > `daily_prices` 는 과거에 받아둔 1000일치가 그대로 남아 있고(가장 오래된 행 2021-02)
-  > `daily_signals` 가 매 거래일 **974행**씩 계속 쌓입니다. 용량이 더 필요하면:
-  > ① 중복 인덱스 정리 — `idx_prices_ticker_date` · `idx_ind_ticker_date` ·
-  > `idx_signals_latest` 는 각 테이블 PK `(ticker, trade_date)` 와 기능이 겹칩니다
-  > (조회가 모두 `ticker` 동등 조건이라 PK 역방향 스캔으로 대체 가능, 약 62MB),
-  > ② `daily_prices` 도 보관 일수 상한 적용, ③ `daily_signals` 오래된 행 정리.
+  > `daily_signals` 가 매 거래일 **974행**씩 계속 쌓입니다.
+
+  > **중복 인덱스 정리 완료 (2026-10-26, 303MB → 241MB)** — `idx_prices_ticker_date` ·
+  > `idx_ind_ticker_date` · `idx_signals_latest` 를 제거했습니다. 세 테이블 모두 PK 가
+  > `(ticker, trade_date)` 로 같은 컬럼을 커버하고, 웹(`web/lib/db.ts`)과 `mv_home_stats` 의
+  > 조회가 전부 `WHERE ticker = ? ORDER BY trade_date DESC`(다중 티커 IN 조회 없음)라
+  > PK 역방향 스캔으로 대체됩니다. 제거 후 `Index Scan Backward using *_pkey` 로
+  > 비용 변화 없이 동작하는 것을 확인했습니다.
+  > **같은 컬럼의 DESC 인덱스를 다시 만들지 마세요** — PK 와 중복됩니다.
+
+  > 용량이 더 필요하면: ① `VACUUM FULL daily_indicators` · `daily_prices` (죽은 행 약 5만,
+  > 8~10MB — 배타 락이 걸리므로 배치가 안 도는 시간에), ② `daily_prices` 도 보관 일수
+  > 상한 적용, ③ `daily_signals` 오래된 행 정리.
 
 ### 수집 모드 (하이브리드)
 
