@@ -7,10 +7,26 @@ import NavProgress from "@/components/NavProgress";
 import SearchSheetProvider from "@/components/SearchSheet";
 import { getDisplayWho } from "@/lib/auth";
 
+const DESCRIPTION =
+  "종목을 검색하면 지금 차트가 어떤 흐름인지 추세·모멘텀·밴드·거래량을 하나의 점수로 요약해 보여드려요.";
+
 export const metadata: Metadata = {
+  // 카톡 등 링크 미리보기용 — 배포 주소는 Vercel 이 빌드 때 넣어 줍니다
+  metadataBase: new URL(
+    process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : "http://localhost:3000",
+  ),
   title: "주가예보",
-  description:
-    "종목을 검색하면 지금 차트가 어떤 흐름인지 추세·모멘텀·밴드·거래량을 하나의 점수로 요약해 보여드려요.",
+  description: DESCRIPTION,
+  openGraph: {
+    title: "주가예보",
+    description: DESCRIPTION,
+    siteName: "주가예보",
+    locale: "ko_KR",
+    type: "website",
+    url: "/",
+  },
 };
 
 export const viewport: Viewport = {

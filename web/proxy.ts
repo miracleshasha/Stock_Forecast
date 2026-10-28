@@ -57,6 +57,18 @@ export async function proxy(req: NextRequest) {
     return res;
   }
 
+  // 카톡 대화방 링크로 들어오면 카톡 안 브라우저 대신 기본 브라우저(사파리·크롬)로 다시 엽니다.
+  // 카톡 안 브라우저는 쿠키가 따로 놀아 전화번호 입력이 유지되지 않습니다.
+  // (미리보기 수집기는 'kakaotalk-scrap' 소문자라 걸리지 않습니다)
+  if (
+    req.method === "GET" &&
+    !req.nextUrl.pathname.startsWith("/api/") &&
+    /KAKAOTALK/.test(req.headers.get("user-agent") ?? "")
+  ) {
+    const target = encodeURIComponent(req.nextUrl.href);
+    return NextResponse.redirect(`kakaotalk://web/openExternal?url=${target}`);
+  }
+
   const isProtected = PROTECTED.some((re) => re.test(req.nextUrl.pathname));
   const at = req.cookies.get(COOKIE.access)?.value;
   const rt = req.cookies.get(COOKIE.refresh)?.value;
