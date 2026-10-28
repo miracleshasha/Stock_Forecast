@@ -83,6 +83,9 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  // 정적 파일만 제외하고 전부 거칩니다 — 로그인한 사람은 어느 화면에서든 토큰이 갱신되도록
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg).*)"],
+  // 정적 파일만 제외하고 전부 거칩니다 — 로그인한 사람은 어느 화면에서든 토큰이 갱신되도록.
+  // manifest·아이콘도 제외: 홈 화면 앱을 띄울 때마다 불리는데 토큰 검증이 필요 없습니다.
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|icon.svg|manifest.webmanifest|apple-icon.png|icon-[^/]*\\.png).*)",
+  ],
 };
