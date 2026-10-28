@@ -1,4 +1,6 @@
+import { Suspense } from "react";
 import SearchBox from "@/components/SearchBox";
+import { HomeGuide } from "@/components/Onboarding";
 import SetupNotice from "@/components/SetupNotice";
 import FavAlerts, { type FavAlert } from "@/components/home/FavAlerts";
 import FavoritesSummary from "@/components/home/FavoritesSummary";
@@ -140,6 +142,9 @@ export default async function HomePage() {
   return (
     <main className="shell">
       <h1 className="sr-only">주가예보 — 종목 차트 흐름 요약</h1>
+      <Suspense fallback={null}>
+        <HomeGuide known={!!userId} />
+      </Suspense>
       <FavAlerts alerts={favAlerts} stats={alertStats} />
       <SearchBox />
 

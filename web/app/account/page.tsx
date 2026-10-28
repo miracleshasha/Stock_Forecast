@@ -43,6 +43,11 @@ export default async function AccountPage() {
         </section>
       )}
       <section className="card">
+        <h2 className="sec-title">사용법</h2>
+        <p className="sec-desc">점수 읽는 법과 기본 사용법을 다시 볼 수 있어요.</p>
+        <Link className="btn btn--soft" href="/?guide=1">사용법 다시 보기</Link>
+      </section>
+      <section className="card">
         <p className="sec-desc">
           즐겨찾기는 이 번호에 저장돼서 다른 기기에서 같은 번호를 넣어도 그대로 보여요.
         </p>
