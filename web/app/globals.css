@@ -645,23 +645,47 @@ button { font-family: inherit; color: inherit; }
 .outlook__why { font-size: 12px; color: var(--sub); word-break: keep-all; }
 .outlook__note { word-break: keep-all; margin-top: 4px; }
 
-/* ---------- 처음 온 사람 안내 (홈 하단 시트 · 종목 한 줄) ---------- */
+/* ---------- 사용법 안내 (홈 하단 시트 · 종목 한 줄) ---------- */
 .guide { position: fixed; inset: 0; z-index: 80; display: flex; align-items: flex-end; justify-content: center; }
 .guide__dim { position: absolute; inset: 0; background: rgba(25, 31, 40, .45); animation: guide-fade .2s ease-out; }
 .guide__panel {
-  position: relative; width: 100%; max-width: var(--maxw); background: var(--card);
-  border-radius: 24px 24px 0 0; padding: 20px 24px calc(24px + env(safe-area-inset-bottom));
+  position: relative; width: 100%; max-width: var(--maxw); max-height: calc(100dvh - 32px); background: var(--card);
+  border-radius: 24px 24px 0 0; padding: 12px 24px calc(12px + env(safe-area-inset-bottom));
   display: flex; flex-direction: column; gap: 12px; animation: guide-up .25s ease-out;
 }
-.guide__hd { display: flex; align-items: center; justify-content: space-between; min-height: 32px; }
+.guide__hd { flex: none; display: flex; align-items: center; justify-content: space-between; margin-right: -12px; }
 .guide__dots { display: inline-flex; gap: 6px; }
 .guide__dot { width: 6px; height: 6px; border-radius: 3px; background: var(--line); transition: width .2s; }
 .guide__dot--on { width: 18px; background: var(--ink); }
-.guide__skip { border: 0; background: none; cursor: pointer; font-size: 14px; color: var(--cap); min-height: 44px; padding: 0 4px; }
-.guide__t { font-size: 22px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.4; margin-top: 4px; }
-.guide__d { font-size: 15px; color: var(--sub); line-height: 1.6; }
-.guide__demo { background: var(--soft); border-radius: 16px; padding: 18px 16px 14px; display: flex; flex-direction: column; gap: 10px; }
+.guide__x { color: var(--cap); }
+.guide__body { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+.guide__t { font-size: 22px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.4; }
+.guide__d { font-size: 15px; color: var(--sub); line-height: 1.6; word-break: keep-all; }
+.guide__demo { background: var(--soft); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.guide__verdict { display: flex; align-items: baseline; gap: 8px; }
+.guide__verdict .verdict__zone { font-size: 20px; }
+.guide__verdict .verdict__score { font-size: 15px; }
+.guide__zones { list-style: none; display: flex; flex-direction: column; gap: 4px; border-top: 1px solid var(--line); padding-top: 10px; }
+.guide__zones li { display: flex; justify-content: space-between; font-size: 13px; color: var(--cap); }
+.guide__zones b { font-weight: 600; color: var(--sub); }
+.guide__zones b.up { color: var(--up); }
+.guide__zones b.down { color: var(--down); }
+.guide__groups { list-style: none; gap: 12px; }
+.guide__groups li { display: flex; flex-direction: column; gap: 2px; }
+.guide__gname { font-size: 15px; font-weight: 700; }
+.guide__gdesc { font-size: 14px; color: var(--sub); }
+.guide__outlook { padding: 2px 16px; background: var(--card); border: 1px solid var(--line); }
+.guide__legend { list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--sub); word-break: keep-all; }
+.guide__legend b { color: var(--ink); margin-right: 4px; }
 .guide__disc { font-size: 13px; color: var(--cap); background: var(--soft); border-radius: 12px; padding: 12px 14px; }
+.guide__ft { flex: none; display: flex; gap: 8px; }
+.guide__ft .btn { margin-top: 0; height: 54px; font-size: 16px; }
+.guide__prev { flex: 0 0 96px; }
+.guide__next { flex: 1; }
+.guide__never {
+  flex: none; align-self: center; border: 0; background: none; cursor: pointer;
+  font-size: 14px; color: var(--cap); min-height: 40px; padding: 0 12px; text-decoration: underline;
+}
 @keyframes guide-up { from { transform: translateY(100%); } to { transform: none; } }
 @keyframes guide-fade { from { opacity: 0; } to { opacity: 1; } }
 

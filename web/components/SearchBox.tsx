@@ -7,7 +7,14 @@ import { MARKET_LABEL, changeTone, formatPct } from "@/lib/format";
 import Icon from "./Icon";
 import { useNavProgress } from "./NavProgress";
 
-const SUGGESTIONS = ["삼성전자", "SK하이닉스", "NVDA", "AAPL", "에코프로비엠"];
+// 누르면 바로 그 종목 화면으로 갑니다
+const SUGGESTIONS = [
+  { label: "삼성전자", ticker: "005930" },
+  { label: "SK하이닉스", ticker: "000660" },
+  { label: "NVDA", ticker: "NVDA" },
+  { label: "AAPL", ticker: "AAPL" },
+  { label: "에코프로비엠", ticker: "247540" },
+];
 
 export default function SearchBox({
   autoFocus = false,
@@ -168,8 +175,8 @@ export default function SearchBox({
       {!q && (
         <div className="chips">
           {SUGGESTIONS.map((s) => (
-            <button key={s} type="button" className="chip" onClick={() => setQ(s)}>
-              {s}
+            <button key={s.ticker} type="button" className="chip" onClick={() => go(s.ticker)}>
+              {s.label}
             </button>
           ))}
         </div>

@@ -43,7 +43,8 @@ function RangeBar({ lo, mid, hi, scale }: { lo: number; mid: number | null; hi: 
   );
 }
 
-function Row({
+/** 기간 한 줄. 사용법 안내에서도 같은 모양을 보여 주려고 내보냅니다 */
+export function OutlookRow({
   o,
   scale,
   close,
@@ -124,7 +125,7 @@ export default function OutlookCard({
 
       <ul className="outlook">
         {hs.map((o) => (
-          <Row key={o.h} o={o} scale={scale} close={px} currency={currency} />
+          <OutlookRow key={o.h} o={o} scale={scale} close={px} currency={currency} />
         ))}
       </ul>
 

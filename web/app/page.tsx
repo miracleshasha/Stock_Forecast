@@ -143,7 +143,7 @@ export default async function HomePage() {
     <main className="shell">
       <h1 className="sr-only">주가예보 — 종목 차트 흐름 요약</h1>
       <Suspense fallback={null}>
-        <HomeGuide known={!!userId} />
+        <HomeGuide />
       </Suspense>
       <FavAlerts alerts={favAlerts} stats={alertStats} />
       <SearchBox />

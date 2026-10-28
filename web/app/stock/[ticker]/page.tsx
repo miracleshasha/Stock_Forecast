@@ -10,7 +10,6 @@ import NewsCard from "@/components/NewsCard";
 import ShortTermCard from "@/components/ShortTermCard";
 import OutlookCard from "@/components/OutlookCard";
 import { StockHint } from "@/components/Onboarding";
-import { getDisplayWho } from "@/lib/auth";
 import { getIndicators, getMacro, getOutlook, getPatternStats, getRecentCandles, getStock, getStockExtras } from "@/lib/db";
 import { formatDateKo } from "@/lib/format";
 import { getInitialQuote } from "@/lib/liveQuote";
@@ -82,7 +81,7 @@ export default async function StockPage({
         marketLabel={region === "KR" ? "국내 종목" : "미국 종목"}
       />
 
-      {hasSignal && <StockHint known={(await getDisplayWho()) != null} />}
+      {hasSignal && <StockHint />}
       <VerdictCard signal={stock.signal} />
 
       {hasSignal && (
