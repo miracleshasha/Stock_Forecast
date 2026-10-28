@@ -10,20 +10,32 @@
 //   - 카카오톡·네이버 등 인앱 브라우저: "홈 화면에 추가" 메뉴 자체가 없습니다.
 //     여기서 아무리 안내해도 따라올 수 없으므로 먼저 기본 브라우저로 내보냅니다.
 //
-// 언제 보여 주나 (1차 결정): 첫 방문은 하단 배너, 두 번째 방문부터 전체 시트.
-//   가치를 한 번 본 뒤에 권해야 추가율이 올라갑니다. 숫자는 SHEET_FROM_VISIT 로 조절.
-//   이미 홈 화면에서 실행 중(standalone)이거나 PC 면 아예 띄우지 않습니다.
+// 언제 보여 주나:
+//   - 하단 배너: 하루에 한 번. 닫으면 그날은 다시 뜨지 않고, 다음 날 다시 띄웁니다.
+//     "그날"은 기기의 현지 날짜 기준이라 자정에 바뀝니다.
+//   - 전체 시트: 두 번째 방문에 딱 한 번만. 가치를 한 번 본 뒤에 권해야 추가율이
+//     올라가지만, 매일 전면으로 막으면 성가시므로 그 뒤로는 배너만 남습니다.
+//   - 이미 홈 화면에서 실행 중(standalone)이거나 PC 면 아예 띄우지 않습니다.
 // ============================================================
 
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Icon from "./Icon";
 
-/** 두 번째 방문부터 전체 시트. 1 로 두면 첫 방문부터 시트가 뜹니다. */
+/** 이 횟수째 방문에 전체 시트를 한 번 띄웁니다. 1 로 두면 첫 방문부터. */
 const SHEET_FROM_VISIT = 2;
-/** 닫은 뒤 다시 묻지 않는 기간 */
-const SNOOZE_DAYS = 14;
 
-const KEY = { visits: "sd.a2hs.visits", hidden: "sd.a2hs.hidden", seen: "sd.a2hs.seen" };
+const KEY = {
+  visits: "sd.a2hs.visits",
+  hiddenDay: "sd.a2hs.hiddenDay", // 닫은 날(YYYY-MM-DD). 그날 하루만 숨깁니다
+  sheetSeen: "sd.a2hs.sheetSeen", // 전체 시트를 이미 한 번 보여 줬는지
+  seen: "sd.a2hs.seen", // 세션당 방문 1회 집계용(sessionStorage)
+};
+
+/** 기기 현지 날짜 YYYY-MM-DD. UTC 로 하면 한국에서 오전 9시에 날짜가 바뀝니다. */
+function dayKey(d: Date = new Date()): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
 
 type Platform = "ios" | "android" | "other";
 
@@ -33,13 +45,14 @@ type InstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 };
 
-const readNum = (k: string): number => {
+const readStr = (k: string): string | null => {
   try {
-    return Number(window.localStorage.getItem(k)) || 0;
+    return window.localStorage.getItem(k);
   } catch {
-    return 0; // 시크릿 모드 등에서 접근이 막히면 "기록 없음"으로 봅니다
+    return null; // 시크릿 모드 등에서 접근이 막히면 "기록 없음"으로 봅니다
   }
 };
+const readNum = (k: string): number => Number(readStr(k)) || 0;
 const write = (k: string, v: string) => {
   try {
     window.localStorage.setItem(k, v);
@@ -68,7 +81,13 @@ function isStandalone(): boolean {
 }
 
 /** 이 안내를 띄울지, 어떤 모습으로 띄울지. 읽기만 하고 아무것도 저장하지 않습니다. */
-type Decision = { platform: Platform; inApp: boolean; visits: number; fresh: boolean };
+type Decision = {
+  platform: Platform;
+  inApp: boolean;
+  visits: number;
+  fresh: boolean; // 이번 세션에서 방문 횟수를 아직 안 올렸는지
+  sheetSeen: boolean; // 전체 시트를 이미 본 적 있는지
+};
 
 function decide(): Decision | null {
   if (isStandalone()) return null; // 이미 홈 화면 앱으로 실행 중 — 권할 이유가 없습니다
@@ -76,8 +95,8 @@ function decide(): Decision | null {
   const platform = detectPlatform(ua);
   if (platform === "other") return null; // PC 는 대상이 아닙니다
 
-  const hidden = readNum(KEY.hidden);
-  if (hidden && Date.now() - hidden < SNOOZE_DAYS * 86400_000) return null;
+  // 오늘 닫았으면 오늘은 끝. 날짜가 바뀌면 자연히 다시 뜹니다
+  if (readStr(KEY.hiddenDay) === dayKey()) return null;
 
   // 방문 횟수는 브라우저 세션당 한 번만 올립니다(화면 이동으로 늘지 않게).
   // 여기서는 세어만 두고, 실제 저장은 아래 effect 가 합니다.
@@ -89,7 +108,13 @@ function decide(): Decision | null {
     fresh = visits === 0; // 저장소가 막혔으면 첫 방문으로 봅니다
   }
   if (fresh) visits += 1;
-  return { platform, inApp: detectInApp(ua), visits, fresh };
+  return {
+    platform,
+    inApp: detectInApp(ua),
+    visits,
+    fresh,
+    sheetSeen: readStr(KEY.sheetSeen) === "1",
+  };
 }
 
 /** 마운트 여부만 알려 주는 구독(구독할 외부 변화가 없어 해지 함수도 비어 있습니다). */
@@ -109,12 +134,19 @@ export default function AddToHome() {
   const platform: Platform = decision?.platform ?? "other";
   const inApp = decision?.inApp ?? false;
   const show = decision != null && !dismissed;
-  const asSheet = openedSheet || (decision?.visits ?? 0) >= SHEET_FROM_VISIT;
+  // 전체 시트는 정해진 방문 횟수에 딱 한 번. 그 뒤로는 배너만 하루 한 번 뜹니다
+  const autoSheet = decision != null && !decision.sheetSeen && decision.visits >= SHEET_FROM_VISIT;
+  const asSheet = openedSheet || autoSheet;
 
   const hide = useCallback((snooze: boolean) => {
     setDismissed(true);
-    if (snooze) write(KEY.hidden, String(Date.now()));
+    if (snooze) write(KEY.hiddenDay, dayKey()); // 오늘 하루만 숨김
   }, []);
+
+  // 전체 시트를 실제로 띄웠으면 기록해 둡니다(다음부터는 배너만)
+  useEffect(() => {
+    if (show && asSheet) write(KEY.sheetSeen, "1");
+  }, [show, asSheet]);
 
   // 센 방문 횟수를 저장합니다(decide 는 읽기만 하므로 쓰기는 여기 한 곳)
   useEffect(() => {
@@ -133,9 +165,10 @@ export default function AddToHome() {
       e.preventDefault();
       setInstaller(e as InstallPromptEvent);
     };
+    // 안드로이드에서 설치가 끝나면 알려 줍니다. iOS 는 이런 이벤트가 없습니다
     const onInstalled = () => {
       setDismissed(true);
-      write(KEY.hidden, String(Date.now()));
+      write(KEY.hiddenDay, dayKey());
     };
     window.addEventListener("beforeinstallprompt", onPrompt);
     window.addEventListener("appinstalled", onInstalled);
