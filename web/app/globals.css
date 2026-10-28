@@ -534,6 +534,7 @@ button { font-family: inherit; color: inherit; }
   background: var(--ink); color: #fff; height: 52px; border-radius: var(--r-ctl);
   font-size: 16px; font-weight: 700; letter-spacing: -0.02em;
 }
+.a2hs__cta:disabled { opacity: .55; cursor: default; }
 .a2hs__later {
   width: 100%; margin-top: 8px; border: 0; background: transparent; cursor: pointer;
   font-family: inherit; color: var(--cap); font-size: 14px; font-weight: 500; height: 44px;

@@ -18,7 +18,7 @@
 //   - 이미 홈 화면에서 실행 중(standalone)이거나 PC 면 아예 띄우지 않습니다.
 // ============================================================
 
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Icon from "./Icon";
 
 /** 이 횟수째 방문에 전체 시트를 한 번 띄웁니다. 1 로 두면 첫 방문부터. */
@@ -74,6 +74,36 @@ function detectInApp(ua: string): boolean {
   return /KAKAOTALK|NAVER\(inapp|Instagram|FBAN|FBAV|Line\/|DaumApps|everytimeApp|whale\/.*inapp/i.test(ua);
 }
 
+/** 카카오톡만 전용 스킴으로 빠져나갈 수 있어 따로 가려냅니다. */
+function detectKakao(ua: string): boolean {
+  return /KAKAOTALK/i.test(ua);
+}
+
+/**
+ * 카카오톡 인앱 브라우저를 기본 브라우저로 넘기는 스킴.
+ * 카카오가 공식 문서로 공개한 기능이 아니라 언제든 막힐 수 있습니다 —
+ * 실패를 전제로 아래 단계(안드로이드 intent → 수동 안내)가 이어집니다.
+ */
+const kakaoEscapeUrl = (): string =>
+  `kakaotalk://web/openExternal?url=${encodeURIComponent(window.location.href)}`;
+
+/**
+ * 안드로이드 기본 브라우저로 넘기는 intent URL.
+ * package 를 지정하지 않는 이유: 크롬을 못박으면 삼성 인터넷이 기본이거나 크롬을
+ * 비활성화한 기기에서 그냥 실패합니다. 빼 두면 기본 브라우저/선택창이 뜨고,
+ * 그래도 안 되면 browser_fallback_url 로 원래 주소에 떨어집니다.
+ */
+const androidEscapeUrl = (): string => {
+  const { host, pathname, search, href } = window.location;
+  return `intent://${host}${pathname}${search}#Intent;scheme=https;S.browser_fallback_url=${encodeURIComponent(href)};end`;
+};
+
+/** 스킴이 먹었는지 직접 알 방법이 없어, 화면이 가려졌는지로 "떠났다"고 봅니다. */
+const leftPage = (): boolean => document.visibilityState === "hidden";
+
+/** 스킴을 호출한 뒤 떠났는지 판단하기까지 기다리는 시간 */
+const ESCAPE_WAIT_MS = 1200;
+
 function isStandalone(): boolean {
   if (window.matchMedia("(display-mode: standalone)").matches) return true;
   // iOS 사파리는 display-mode 대신 이 값을 씁니다
@@ -84,6 +114,7 @@ function isStandalone(): boolean {
 type Decision = {
   platform: Platform;
   inApp: boolean;
+  kakao: boolean; // 카카오톡 인앱이면 전용 스킴으로 한 번에 나갈 수 있습니다
   visits: number;
   fresh: boolean; // 이번 세션에서 방문 횟수를 아직 안 올렸는지
   sheetSeen: boolean; // 전체 시트를 이미 본 적 있는지
@@ -111,6 +142,7 @@ function decide(): Decision | null {
   return {
     platform,
     inApp: detectInApp(ua),
+    kakao: detectKakao(ua),
     visits,
     fresh,
     sheetSeen: readStr(KEY.sheetSeen) === "1",
@@ -130,9 +162,13 @@ export default function AddToHome() {
   const [openedSheet, setOpenedSheet] = useState(false);
   const [installer, setInstaller] = useState<InstallPromptEvent | null>(null);
   const [copied, setCopied] = useState(false);
+  /** 인앱 탈출 진행 상태. manual 이면 스킴이 안 먹은 것이라 손으로 하는 안내를 폅니다 */
+  const [escape, setEscape] = useState<"idle" | "trying" | "manual">("idle");
+  const timers = useRef<number[]>([]);
 
   const platform: Platform = decision?.platform ?? "other";
   const inApp = decision?.inApp ?? false;
+  const kakao = decision?.kakao ?? false;
   const show = decision != null && !dismissed;
   // 전체 시트는 정해진 방문 횟수에 딱 한 번. 그 뒤로는 배너만 하루 한 번 뜹니다
   const autoSheet = decision != null && !decision.sheetSeen && decision.visits >= SHEET_FROM_VISIT;
@@ -141,6 +177,12 @@ export default function AddToHome() {
   const hide = useCallback((snooze: boolean) => {
     setDismissed(true);
     if (snooze) write(KEY.hiddenDay, dayKey()); // 오늘 하루만 숨김
+  }, []);
+
+  // 언마운트될 때 남은 타이머 정리
+  useEffect(() => {
+    const list = timers.current;
+    return () => list.forEach((t) => window.clearTimeout(t));
   }, []);
 
   // 전체 시트를 실제로 띄웠으면 기록해 둡니다(다음부터는 배너만)
@@ -200,48 +242,91 @@ export default function AddToHome() {
     else hide(true);
   };
 
-  /** 인앱 브라우저 탈출. 안드로이드는 크롬을 직접 열 수 있고, iOS 는 주소 복사밖에 없습니다. */
-  const escapeInApp = async () => {
-    if (platform === "android") {
-      const { host, pathname, search } = window.location;
-      window.location.href = `intent://${host}${pathname}${search}#Intent;scheme=https;package=com.android.chrome;end`;
-      return;
-    }
+  /**
+   * 인앱 브라우저 탈출. 어느 방법도 "성공했는지" 알려 주지 않아서 단계로 내려갑니다.
+   *   1) 카카오톡이면 전용 스킴 — 되면 버튼 한 번으로 끝
+   *   2) 안드로이드면 intent URL — 기본 브라우저/선택창
+   *   3) 둘 다 화면이 그대로면 수동 안내로 전환
+   * 각 단계 뒤 ESCAPE_WAIT_MS 동안 화면이 가려졌는지 보고 다음으로 넘어갑니다.
+   */
+  const escapeInApp = useCallback(async () => {
+    setEscape("trying");
+    const step = (url: string) =>
+      new Promise<boolean>((resolve) => {
+        window.location.href = url;
+        timers.current.push(
+          window.setTimeout(() => resolve(leftPage()), ESCAPE_WAIT_MS),
+        );
+      });
+
+    if (kakao && (await step(kakaoEscapeUrl()))) return;
+    if (platform === "android" && (await step(androidEscapeUrl()))) return;
+
+    // 여기까지 왔으면 화면이 그대로 — 주소라도 복사해 두고 수동 안내를 폅니다
     try {
       await navigator.clipboard.writeText(window.location.href);
       setCopied(true);
     } catch {
-      setCopied(false); // 복사가 막히면 아래 안내 문구대로 직접 하시면 됩니다
+      setCopied(false); // 복사가 막히면 안내 문구대로 직접 하시면 됩니다
     }
-  };
+    setEscape("manual");
+  }, [kakao, platform]);
+
+  /** 복사만 따로 (수동 안내 화면의 버튼) */
+  const copyUrl = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  }, []);
 
   if (!show) return null;
+
+  // 인앱 브라우저에서 자동으로 빠져나갈 수단이 있는지. iOS 는 카카오톡만 가능합니다
+  const canAutoEscape = kakao || platform === "android";
+  const browserName = platform === "ios" ? "Safari" : "기본 브라우저";
 
   const body = inApp ? (
     <>
       <p className="a2hs__lead">
-        지금은 <b>{platform === "ios" ? "카카오톡 등 앱 안의 브라우저" : "앱 안의 브라우저"}</b>라
-        홈 화면에 추가할 수 없어요. 먼저 기본 브라우저로 열어 주세요.
+        지금은 <b>{kakao ? "카카오톡 안의 브라우저" : "앱 안의 브라우저"}</b>라 홈 화면에
+        추가할 수 없어요. 먼저 {browserName}로 열어 주세요.
       </p>
-      {platform === "android" ? (
-        <button type="button" className="a2hs__cta" onClick={escapeInApp}>
-          크롬으로 열기
+
+      {canAutoEscape && escape !== "manual" && (
+        <button
+          type="button"
+          className="a2hs__cta"
+          onClick={escapeInApp}
+          disabled={escape === "trying"}
+        >
+          {escape === "trying" ? "여는 중…" : `${browserName}로 열기`}
         </button>
-      ) : (
+      )}
+
+      {(!canAutoEscape || escape === "manual") && (
         <>
-          <button type="button" className="a2hs__cta" onClick={escapeInApp}>
+          {escape === "manual" && (
+            <p className="a2hs__note">
+              자동으로 열리지 않았어요. 아래대로 해 주세요.
+            </p>
+          )}
+          <button type="button" className="a2hs__cta" onClick={copyUrl}>
             {copied ? "주소를 복사했어요" : "주소 복사하기"}
           </button>
           <ol className="a2hs__steps">
             <li>
               <span className="a2hs__num">1</span>
               <span>
-                오른쪽 아래 <b>···</b> 를 누르고 <b>Safari로 열기</b> 를 선택하세요.
+                <b>더보기(⋯)</b> 메뉴에서{" "}
+                <b>{kakao ? "다른 브라우저로 열기" : `${browserName}로 열기`}</b> 를 선택하세요.
               </span>
             </li>
             <li>
               <span className="a2hs__num">2</span>
-              <span>메뉴가 없다면 Safari를 열고 복사한 주소를 붙여넣으세요.</span>
+              <span>메뉴가 없다면 {browserName}를 열고 복사한 주소를 붙여넣으세요.</span>
             </li>
           </ol>
         </>
