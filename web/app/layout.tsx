@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/next";
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Providers from "./providers";
@@ -57,6 +58,8 @@ export default async function RootLayout({
             </SearchSheetProvider>
           </NavProgress>
         </Providers>
+        {/* 하루 단위 방문자 집계 — 쿠키를 쓰지 않고 수치만 셉니다 */}
+        <Analytics />
       </body>
     </html>
   );
