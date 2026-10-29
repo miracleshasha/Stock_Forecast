@@ -12,8 +12,11 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#F2F4F6",
     lang: "ko",
     icons: [
-      { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
-      { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      // 안드로이드는 아이콘을 원·사각·물방울 등 제조사 모양대로 잘라냅니다.
+      // 잘려도 되는 바깥 여백을 둔 별도 이미지가 없으면 캔들 끝이 잘립니다.
+      { src: "/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
   };
 }
