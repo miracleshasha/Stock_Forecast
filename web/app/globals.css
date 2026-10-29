@@ -696,6 +696,9 @@ button { font-family: inherit; color: inherit; }
 .guide__steps { list-style: none; display: flex; flex-direction: column; gap: 10px; background: var(--soft); border-radius: 16px; padding: 16px; }
 .guide__steps li { display: flex; align-items: flex-start; gap: 10px; font-size: 15px; color: var(--sub); line-height: 1.5; }
 .guide__steps b { color: var(--ink); }
+/* 단계 밑에 붙는 보조 설명 — 기기·브라우저 버전에 따라 다를 때 */
+.guide__hint { display: block; margin-top: 2px; font-size: 13px; color: var(--faint); }
+.guide__hint svg { color: var(--faint); }
 .guide__steps svg { display: inline-block; vertical-align: -2px; color: var(--ink); }
 .guide__n {
   flex: none; width: 22px; height: 22px; border-radius: 11px; margin-top: 1px;

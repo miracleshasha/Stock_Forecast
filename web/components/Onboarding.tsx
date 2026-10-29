@@ -137,8 +137,18 @@ function AddToHome({ device }: { device: Device }) {
       items={
         device === "ios"
           ? [
+              // 최근 사파리는 아래 바에 공유 버튼이 없고 ⋯ 안에 들어 있습니다.
+              // 예전 사파리처럼 공유가 바로 보이는 경우를 위해 한 줄로 덧붙였습니다.
               <>
-                화면 아래(또는 위)의 <b>공유</b> 버튼<Icon name="share" size={16} />을 눌러요
+                화면 오른쪽 아래 <b>더보기</b>
+                <Icon name="more" size={16} />를 눌러요
+                <span className="guide__hint">
+                  공유 버튼<Icon name="share" size={14} />이 바로 보이면 그걸 눌러요
+                </span>
+              </>,
+              <>
+                <b>공유</b>
+                <Icon name="share" size={16} />를 눌러요
               </>,
               <>
                 목록을 내려 <b>홈 화면에 추가</b>를 눌러요
