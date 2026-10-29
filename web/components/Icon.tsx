@@ -18,6 +18,13 @@ const PATHS = {
     </>
   ),
   close: <path d="M6 6l12 12M18 6L6 18" />,
+  /** 사파리 아래 바의 더보기 단추 — 점 세 개가 든 둥근 사각형 */
+  more: (
+    <>
+      <rect x="2.5" y="4.5" width="19" height="15" rx="5" />
+      <path d="M7.5 12h.01M12 12h.01M16.5 12h.01" strokeWidth="2.8" />
+    </>
+  ),
   share: (
     <>
       <path d="M12 3v12" />
