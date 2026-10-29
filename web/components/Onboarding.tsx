@@ -12,6 +12,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { FAVORITES_MAX } from "@/lib/favorites";
 import type { OutlookHorizon } from "@/lib/types";
 import Icon from "./Icon";
 import { OutlookRow } from "./OutlookCard";
@@ -309,10 +310,27 @@ function StepBody({ k, device }: { k: StepKey; device: Device }) {
         </>
       );
     case "free":
+      // 다른 장과 달리 예시 화면이 없어 투자 유의 문구만 있었습니다 — 담는 방법을 단계로 보여 줍니다
       return (
-        <p className="guide__disc">
-          현재 차트 상태를 요약한 정보예요. 앞으로의 수익을 보장하지 않으며, 투자 판단의 책임은 본인에게 있어요.
-        </p>
+        <>
+          <NumList
+            items={[
+              <>
+                종목 화면에서 <b>별표</b>
+                <Icon name="star" size={16} />를 눌러요
+              </>,
+              <>
+                <b>휴대폰 번호</b>를 한 번 넣으면 저장돼요 (최대 {FAVORITES_MAX}개)
+              </>,
+              <>
+                홈과 즐겨찾기에서 모아 보고, <b>밴드 상·하단</b>을 지나면 맨 위에 알려드려요
+              </>,
+            ]}
+          />
+          <p className="guide__disc">
+            현재 차트 상태를 요약한 정보예요. 앞으로의 수익을 보장하지 않으며, 투자 판단의 책임은 본인에게 있어요.
+          </p>
+        </>
       );
     case "home":
       return <AddToHome device={device} />;
