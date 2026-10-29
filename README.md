@@ -231,6 +231,21 @@ npm run dev                        # http://localhost:3000
 
 Supabase 미연결 시에는 각 화면에 설정 안내가 표시됩니다(배치·env 확인).
 
+### 방문자 집계 (Vercel Web Analytics)
+
+`app/layout.tsx` 에 `@vercel/analytics` 의 `<Analytics />` 를 두어 일별 방문자·페이지뷰를
+셉니다. 쿠키를 쓰지 않고(`IP + User-Agent + 날짜별 임의값` 해시로 하루 동안만 같은 사람인지
+구분), 전화번호·계정과 묶이지 않습니다.
+
+**코드만으로는 숫자가 쌓이지 않습니다.** Vercel 대시보드에서 프로젝트 → Analytics →
+Enable 을 한 번 눌러야 수집이 시작됩니다(프로젝트 설정이라 코드·API 로 못 켭니다).
+
+확인: Vercel 대시보드 Analytics 탭, 또는 Vercel MCP 의 `count_pageviews` /
+`aggregate_pageviews`(`by: ["day"]`).
+
+재방문·전환율처럼 서비스 고유 지표(즐겨찾기 등록률, 홈 화면 아이콘으로 다시 들어온 비율)는
+여기서 안 나옵니다 — 2차에서 Supabase 자체 집계로 다룹니다.
+
 ---
 
 ## 스코어링 (기획서 §5.1)
