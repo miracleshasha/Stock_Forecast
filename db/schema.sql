@@ -28,7 +28,9 @@ CREATE TABLE IF NOT EXISTS daily_prices (
   volume      BIGINT,
   PRIMARY KEY (ticker, trade_date)
 );
-CREATE INDEX IF NOT EXISTS idx_prices_ticker_date ON daily_prices (ticker, trade_date DESC);
+-- PK (ticker, trade_date) 가 같은 컬럼을 커버하므로 DESC 인덱스를 따로 두지 않습니다.
+-- 조회는 모두 WHERE ticker = ? ORDER BY trade_date DESC 라 PK 역방향 스캔으로
+-- 처리됩니다(Index Scan Backward using *_pkey). 자세한 경위는 README 참고.
 
 -- ---------- 계산된 지표 ----------
 CREATE TABLE IF NOT EXISTS daily_indicators (
@@ -43,7 +45,9 @@ CREATE TABLE IF NOT EXISTS daily_indicators (
   vol_ratio20 NUMERIC, obv BIGINT,
   PRIMARY KEY (ticker, trade_date)
 );
-CREATE INDEX IF NOT EXISTS idx_ind_ticker_date ON daily_indicators (ticker, trade_date DESC);
+-- PK (ticker, trade_date) 가 같은 컬럼을 커버하므로 DESC 인덱스를 따로 두지 않습니다.
+-- 조회는 모두 WHERE ticker = ? ORDER BY trade_date DESC 라 PK 역방향 스캔으로
+-- 처리됩니다(Index Scan Backward using *_pkey). 자세한 경위는 README 참고.
 
 -- ---------- 매크로 (종목 무관, 날짜 단위) ----------
 CREATE TABLE IF NOT EXISTS daily_macro (
@@ -64,7 +68,9 @@ CREATE TABLE IF NOT EXISTS daily_signals (
   tags          TEXT[],                    -- {"pos:정배열","neg:VIX 상승"}
   PRIMARY KEY (ticker, trade_date)
 );
-CREATE INDEX IF NOT EXISTS idx_signals_latest ON daily_signals (ticker, trade_date DESC);
+-- PK (ticker, trade_date) 가 같은 컬럼을 커버하므로 DESC 인덱스를 따로 두지 않습니다.
+-- 조회는 모두 WHERE ticker = ? ORDER BY trade_date DESC 라 PK 역방향 스캔으로
+-- 처리됩니다(Index Scan Backward using *_pkey). 자세한 경위는 README 참고.
 
 -- ============================================================
 -- 뷰: ticker별 최신 1건 (읽기 경로에서 사용)
