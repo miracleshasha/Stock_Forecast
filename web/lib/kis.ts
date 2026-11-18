@@ -6,7 +6,8 @@
 // 여기서 얻은 현재가는 화면 상단 숫자에만 얹습니다.
 // daily_prices 에는 절대 쓰지 않습니다(미완성 봉이 섞이면 지표가 오염됨).
 //
-// 토큰은 발급하지 않고 배치가 kis_token 에 넣어둔 것을 읽어 씁니다.
+// 토큰은 배치가 kis_token 에 넣어둔 것을 읽어 씁니다. 배치가 멈춰 토큰이 만료된
+// 경우에만 서버가 직접 발급해 kis_token 에 다시 넣습니다(2026-11, 아래 issueToken).
 // ============================================================
 
 import { getSupabase } from "./supabase";
@@ -30,6 +31,75 @@ export function isKisConfigured(): boolean {
 // ---------- 토큰 ----------
 let memo: { token: string; expiresAt: number } | null = null;
 
+// KIS 는 토큰 발급에 분당 제한이 있습니다. 서버리스는 인스턴스가 여러 개라
+//  - 같은 인스턴스: 발급을 시도한 뒤 70초 동안은 다시 시도하지 않고
+//  - 인스턴스끼리: kis_token.updated_at 을 먼저 바꾼(선점한) 요청 하나만 발급합니다.
+const ISSUE_GAP_MS = 70_000;
+let lastIssueTry = 0;
+
+type Sb = NonNullable<ReturnType<typeof getSupabase>>;
+
+/**
+ * 배치 토큰이 없거나 만료됐을 때의 대비책. 실패하면 null → 호출자는 확정 종가를 보여줍니다.
+ * @param hasRow kis_token 행이 있는지(선점은 행이 있을 때만 걸 수 있음)
+ */
+async function issueToken(sb: Sb, hasRow: boolean): Promise<string | null> {
+  const now = Date.now();
+  if (now - lastIssueTry < ISSUE_GAP_MS) return null;
+  lastIssueTry = now;
+
+  if (hasRow) {
+    const { data: claimed, error } = await sb
+      .from("kis_token")
+      .update({ updated_at: new Date(now).toISOString() })
+      .eq("id", 1)
+      .lt("updated_at", new Date(now - ISSUE_GAP_MS).toISOString())
+      .select("id");
+    if (error) {
+      console.warn("[kis] 토큰 발급 선점 실패:", error.message);
+      return null;
+    }
+    if (!claimed?.length) return null; // 다른 요청이 방금 발급 중 — 이번엔 종가로
+  }
+
+  try {
+    const res = await fetch(`${BASE_URL}/oauth2/tokenP`, {
+      method: "POST",
+      headers: { "content-type": "application/json; charset=utf-8" },
+      body: JSON.stringify({ grant_type: "client_credentials", appkey: APP_KEY, appsecret: APP_SECRET }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) {
+      console.warn("[kis] 토큰 발급 실패: HTTP", res.status);
+      return null;
+    }
+    const body = (await res.json()) as { access_token?: unknown; expires_in?: unknown };
+    const token = typeof body.access_token === "string" ? body.access_token : "";
+    if (!token) {
+      console.warn("[kis] 토큰 발급 응답에 access_token 없음");
+      return null;
+    }
+    const expiresAt = Date.now() + (Number(body.expires_in) || 86400) * 1000;
+    const { error } = await sb.from("kis_token").upsert(
+      {
+        id: 1,
+        access_token: token,
+        expires_at: new Date(expiresAt).toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "id" },
+    );
+    if (error) console.warn("[kis] 새 토큰 저장 실패(이 인스턴스에서만 사용):", error.message);
+    memo = { token, expiresAt };
+    console.warn("[kis] 배치 토큰이 없거나 만료돼 서버에서 새로 발급했습니다 — 배치 상태를 확인하세요");
+    return token;
+  } catch (e) {
+    console.warn("[kis] 토큰 발급 실패:", e);
+    return null;
+  }
+}
+
 async function getToken(): Promise<string | null> {
   const now = Date.now();
   if (memo && memo.expiresAt > now + 60_000) return memo.token;
@@ -50,14 +120,14 @@ async function getToken(): Promise<string | null> {
     return null;
   }
   if (!data) {
-    console.warn("[kis] kis_token 행 없음 — 배치가 아직 토큰을 공유하지 않았습니다");
-    return null;
+    console.warn("[kis] kis_token 행 없음 — 서버에서 발급을 시도합니다");
+    return issueToken(sb, false);
   }
 
   const expiresAt = new Date(data.expires_at as string).getTime();
   if (!Number.isFinite(expiresAt) || expiresAt <= now + 60_000) {
-    console.warn("[kis] kis_token 만료됨:", data.expires_at);
-    return null;
+    console.warn("[kis] kis_token 만료됨:", data.expires_at, "— 서버에서 발급을 시도합니다");
+    return issueToken(sb, true);
   }
 
   memo = { token: data.access_token as string, expiresAt };

@@ -24,9 +24,8 @@ def _today() -> datetime:
 def _publish_token(token: str, expires_at: float):
     """웹(읽기 경로)이 현재가 조회에 쓸 수 있도록 토큰을 Supabase에 공유.
 
-    웹이 직접 발급하지 않는 이유: KIS는 토큰 재발급에 분당 제한이 있고,
-    서버리스는 콜드스타트마다 캐시가 날아가 발급을 반복하게 됩니다.
-    발급은 배치가 하루 한 번만 하고 웹은 읽어 쓰기만 합니다.
+    평소 발급은 배치가 하루 한 번만 합니다(KIS 토큰 재발급 분당 제한).
+    배치가 멈춰 이 토큰이 만료되면 웹이 대비책으로 직접 발급해 덮어씁니다(2026-11).
     """
     if not (config.SUPABASE_URL and config.SUPABASE_SERVICE_ROLE_KEY):
         return

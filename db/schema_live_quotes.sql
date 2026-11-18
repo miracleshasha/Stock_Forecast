@@ -20,9 +20,9 @@ CREATE TABLE IF NOT EXISTS live_quotes (
 );
 
 -- ---------- KIS 접근토큰 공유 ----------
--- 웹은 토큰을 직접 발급하지 않습니다. KIS는 토큰 재발급에 분당 제한이 있고,
--- 서버리스는 콜드스타트마다 캐시가 날아가 발급을 반복하게 되기 때문입니다.
--- 배치가 하루 한 번 발급하며 여기에 넣어두고, 웹은 읽어 쓰기만 합니다.
+-- 배치가 하루 한 번 발급하며 여기에 넣어두고, 웹은 읽어 씁니다. KIS는 토큰 재발급에
+-- 분당 제한이 있어 웹은 평소 발급하지 않습니다. 배치가 멈춰 토큰이 만료된 경우에만
+-- 웹이 updated_at 을 선점한 요청 하나로 발급해 여기에 다시 넣습니다(2026-11).
 CREATE TABLE IF NOT EXISTS kis_token (
   id            SMALLINT PRIMARY KEY DEFAULT 1,
   access_token  TEXT NOT NULL,
