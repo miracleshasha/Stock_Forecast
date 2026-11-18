@@ -6,6 +6,7 @@ import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import NavProgress from "@/components/NavProgress";
 import SearchSheetProvider from "@/components/SearchSheet";
+import StaleNotice from "@/components/StaleNotice";
 import { getDisplayWho } from "@/lib/auth";
 
 const DESCRIPTION =
@@ -53,6 +54,7 @@ export default async function RootLayout({
           <NavProgress>
             <SearchSheetProvider>
               <TopBar who={who} />
+              <StaleNotice />
               {children}
               <BottomNav who={who} />
             </SearchSheetProvider>
