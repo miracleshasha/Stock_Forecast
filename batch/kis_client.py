@@ -41,18 +41,45 @@ def _publish_token(token: str, expires_at: float):
         print(f"  [kis] 토큰 공유 실패(배치는 계속 진행): {e}")
 
 
+def _shared_token(margin: float) -> tuple[str, float] | None:
+    """kis_token(웹·다른 배치와 공유)에 아직 넉넉히 남은 토큰이 있으면 그것을 씁니다.
+
+    클라우드(GitHub Actions)는 실행마다 로컬 캐시가 비어 있어, 이게 없으면 매번
+    새로 발급하게 됩니다. 웹이 대신 발급해 둔 토큰도 여기서 이어받습니다(2026-11).
+    """
+    if not (config.SUPABASE_URL and config.SUPABASE_SERVICE_ROLE_KEY):
+        return None
+    try:
+        import supabase_io
+        rows = supabase_io.select("kis_token", {"select": "access_token,expires_at", "id": "eq.1"})
+        if not rows:
+            return None
+        expires_at = datetime.fromisoformat(rows[0]["expires_at"].replace("Z", "+00:00")).timestamp()
+        if expires_at > time.time() + margin:
+            return rows[0]["access_token"], expires_at
+    except Exception as e:  # noqa: BLE001
+        print(f"  [kis] 공유 토큰 조회 실패(새로 발급): {e}")
+    return None
+
+
 def get_access_token() -> str:
     cache = config.TOKEN_CACHE
+    # 만료 직전까지 쓰지 않고 여유를 두고 갱신합니다. 장중에 만료되면
+    # 웹의 실시간 현재가가 다음 배치까지 종가로 폴백해 버립니다.
+    margin = config.TOKEN_MIN_REMAINING_HOURS * 3600
     if cache.exists():
         try:
             data = json.loads(cache.read_text())
-            # 만료 직전까지 쓰지 않고 여유를 두고 갱신합니다. 장중에 만료되면
-            # 웹의 실시간 현재가가 다음 배치까지 종가로 폴백해 버립니다.
-            margin = config.TOKEN_MIN_REMAINING_HOURS * 3600
             if data.get("expires_at", 0) > time.time() + margin:
                 return data["access_token"]
         except Exception:
             pass
+
+    shared = _shared_token(margin)
+    if shared:
+        token, expires_at = shared
+        cache.write_text(json.dumps({"access_token": token, "expires_at": expires_at}))
+        return token
 
     resp = requests.post(
         f"{config.KIS_BASE_URL}/oauth2/tokenP",
