@@ -1,0 +1,26 @@
+# 배치 지연 감시. 웹의 /api/health 가 503(데이터가 평일 2일 이상 밀림)이면 이 작업이
+# 실패하고, GitHub 이 실패 알림 메일을 보냅니다(별도 감시 서비스 없이).
+# 주소를 바꾸려면 저장소 Variables 에 HEALTH_URL 을 넣으세요.
+name: 데이터 지연 감시
+
+on:
+  schedule:
+    - cron: "0 12 * * 1-5"   # 월~금 21:00 KST — 국내 배치(18:30)가 끝난 뒤
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: /api/health 확인
+        env:
+          HEALTH_URL: ${{ vars.HEALTH_URL || 'https://stock-forecast-59po.vercel.app/api/health' }}
+        run: |
+          body=$(curl -sS --max-time 30 -w '\n%{http_code}' "$HEALTH_URL")
+          code=$(echo "$body" | tail -n1)
+          echo "응답: $(echo "$body" | head -n -1) (HTTP $code)"
+          if [ "$code" != "200" ]; then
+            echo "::error::데이터 업데이트가 지연되고 있어요. 배치 실행 기록(일일 배치)을 확인하세요."
+            exit 1
+          fi

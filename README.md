@@ -135,8 +135,24 @@ DB에 이력이 없는 신규 편입 종목은 증분 모드에서도 자동으�
 > 다음 날 덮어써져 자연히 고쳐졌지만 증분에서는 굳어버리므로, 정규장 종료 전(D+1 06:00 KST
 > 이전) 행은 저장하지 않습니다. `SKIP_INCOMPLETE_OVERSEAS=0` 으로 끌 수 있습니다.
 
-### 매일 자동 실행 (launchd, 설치됨)
-macOS LaunchAgent 2개가 설치되어 있습니다.
+### 매일 자동 실행 (GitHub Actions, 2026-11~)
+2026-11-14 Mac 이 멈춰 배치가 열흘 넘게 돌지 않은 뒤로, 배치는 **GitHub Actions** 에서 돕니다
+(`.github/workflows/batch.yml`). 시각·범위는 아래 launchd 와 같습니다(cron 은 UTC, 수십 분 늦을 수 있음).
+
+- **필요한 Secrets** (저장소 Settings → Secrets and variables → Actions):
+  `KIS_APP_KEY`, `KIS_APP_SECRET`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
+- **수동 실행**: Actions 탭 → "일일 배치" → Run workflow → `kr` / `us` / `full`
+- **시간대**: 배치는 날짜를 한국 시간으로 계산하므로 워크플로에서 `TZ=Asia/Seoul` 을 줍니다.
+- **토큰**: 실행마다 로컬 캐시가 비므로 `kis_token`(웹과 공유)에 12시간 이상 남은 토큰이 있으면
+  그것을 이어 쓰고, 없을 때만 새로 발급합니다.
+- **지연 감시**: `.github/workflows/health.yml` 이 평일 21:00 KST 에 `/api/health` 를 확인해
+  지연(503)이면 실패 → GitHub 이 실패 알림 메일을 보냅니다.
+- **launchd 와 동시에 돌리지 마세요.** Actions 가 정상 동작하는 걸 확인한 뒤 아래 `bootout` 으로
+  Mac 의 에이전트 3개를 해제합니다(같이 돌아도 데이터는 덮어쓰기라 깨지지 않지만 KIS 호출이 두 배).
+- GitHub 은 저장소에 60일 동안 활동이 없으면 예약 실행을 멈춥니다. 그때는 Actions 탭에서 다시 켭니다.
+
+### (이전) 매일 자동 실행 (launchd)
+macOS LaunchAgent 3개가 설치되어 있습니다.
 
 | Label | 시각 | 하는 일 | 종목 |
 |---|---|---|---|
@@ -164,7 +180,7 @@ launchctl kickstart gui/$(id -u)/com.signaldesk.batch         # 국내 즉시 �
 launchctl kickstart gui/$(id -u)/com.signaldesk.batch.full    # 전량 즉시 실행
 launchctl bootout   gui/$(id -u)/com.signaldesk.batch.us      # 해제(중단)
 ```
-> Mac이 켜져 있어야 실행됩니다. 24/7 실행이 필요하면 GitHub Actions cron으로 이전 가능.
+> Mac이 켜져 있어야 실행됩니다. → 2026-11 부터 GitHub Actions 로 이전(위 절).
 
 ### 유니버스 확장
 ```bash
